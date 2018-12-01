@@ -7,9 +7,9 @@ replicated-key-value-store-w-paxos
 ├───src
 │   ├───main
 │   │   ├───scala
-│   │   │   ├───paxos						(api based on the Swagger specification)
-│   │   │   ├───statemachinereplication					(allows the decoupling of services)
-│   │   │   ├───testapp					(general configurations)
+│   │   │   ├───paxos
+│   │   │   ├───statemachinereplication
+│   │   │   ├───testapp
 │   └───test
 ```
 
