@@ -1,6 +1,6 @@
 package statemachinereplication
 
-import akka.actor.ActorRef
+import utils.Node
 
-case class updateReplicas(replicas: Set[ActorRef])
+case class updateReplicas(replicas: Set[Node])
 
