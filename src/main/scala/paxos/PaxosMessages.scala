@@ -8,6 +8,6 @@ case class PrepareOk(sna : Int, va : String)
 
 object PrepareNotOk
 
-case class Accept(sna : Int, va: String)
+case class AcceptOk(sna : Int, va: String)
 
 object AcceptNotOk
