@@ -1,6 +1,6 @@
 package paxos.proposers
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging}
 import paxos._
 import statemachinereplication.updateReplicas
 import utils.{Node, Utils}
