@@ -1,5 +1,9 @@
 package paxos
 
+import akka.actor.ActorRef
+
+case class Init(membership : List[ActorRef])
+
 case class Propose(value: String)
 
 case class Prepare(sn : Int)
