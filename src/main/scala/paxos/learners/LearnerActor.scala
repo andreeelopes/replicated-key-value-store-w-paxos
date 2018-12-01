@@ -33,7 +33,8 @@ class LearnerActor extends Actor with ActorLogging {
         aset += sender
 
         if (Utils.majority(aset.size, replicas))
-          myNode.smrActor ! DecisionDelivery(va)
+          log.info(s"Decided = $va")
+        //myNode.smrActor ! DecisionDelivery(va)
       }
   }
 
