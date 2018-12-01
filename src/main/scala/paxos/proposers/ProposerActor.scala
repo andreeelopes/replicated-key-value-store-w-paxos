@@ -5,13 +5,13 @@ import paxos._
 import statemachinereplication.updateReplicas
 import utils.{Node, Utils}
 
-class ProposerActor extends Actor with ActorLogging{
+class ProposerActor extends Actor with ActorLogging {
   //state
   var replicas = Set[Node]()
-  var sn = 0          // sequence number of the proposed value
-  var value = ""      // value to be proposed
-  var prepares = 0    // number of received prepares_ok
-  var accepts = 0     // number of received accepts_ok
+  var sn = 0 // sequence number of the proposed value
+  var value = "" // value to be proposed
+  var prepares = 0 // number of received prepares_ok
+  var accepts = 0 // number of received accepts_ok
 
 
   override def receive: Receive = {
@@ -36,7 +36,7 @@ class ProposerActor extends Actor with ActorLogging{
   def receivePrepareOk(sna: Int, va: String): Unit = {
     prepares += 1
     value = va
-    if(Utils.majority(prepares, replicas)){
+    if (Utils.majority(prepares, replicas)) {
       replicas.foreach(r => r.acceptorActor ! Accept(sna, value))
     }
   }
