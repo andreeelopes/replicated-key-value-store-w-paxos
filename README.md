@@ -10,6 +10,7 @@ replicated-key-value-store-w-paxos
 │   │   │   ├───paxos
 │   │   │   ├───statemachinereplication
 │   │   │   ├───testapp
+│   │   │   └───utils
 │   └───test
 ```
 
