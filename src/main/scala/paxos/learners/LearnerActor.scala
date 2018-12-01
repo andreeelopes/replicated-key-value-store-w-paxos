@@ -13,6 +13,8 @@ class LearnerActor extends Actor with ActorLogging {
   var replicas = Set[Node]()
   var myNode: Node = _
 
+  var receivedString = "" //TODO DEBUG only remover -nelson
+
   override def receive = {
 
     case Init(_replicas_, _myNode_) =>
@@ -22,6 +24,8 @@ class LearnerActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case AcceptOk(n, v) =>
+      log.info(s"Receive(ACCEPT_OK, $n, $v)")
+
       if (n < na) {}
       else {
         if (n > na) {
@@ -32,8 +36,11 @@ class LearnerActor extends Actor with ActorLogging {
 
         aset += sender
 
-        if (Utils.majority(aset.size, replicas))
+        if (Utils.majority(aset.size, replicas)) {
           log.info(s"Decided = $va")
+          receivedString += " " + va
+          log.info(receivedString)
+        }
         //myNode.smrActor ! DecisionDelivery(va)
       }
   }

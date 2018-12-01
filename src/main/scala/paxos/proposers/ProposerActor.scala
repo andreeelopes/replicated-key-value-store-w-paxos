@@ -18,26 +18,38 @@ class ProposerActor extends Actor with ActorLogging {
     case Init(_replicas_, _) =>
       replicas = _replicas_
     case Propose(v) =>
+      log.info(s"Propose($v)")
       receivePropose(v)
     case PrepareOk(sna, va) =>
+      log.info(s"Receive(PREPARE_OK, $sna, $va)")
       receivePrepareOk(sna, va)
     case PrepareNotOk | AcceptNotOk =>
-      self ! Propose(value)
+      log.info(s"Receive Not Ok")
+      //self ! Propose(value) //TODO voltar a por, foi so para debug que se desactivou -nelson
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
   }
 
   def receivePropose(v: String): Unit = {
-    replicas.foreach(r => r.acceptorActor ! Prepare(sn))
+    value = v
+    replicas.foreach {
+      r =>
+        r.acceptorActor ! Prepare(sn)
+        log.info(s"Send(PREPARE,$sn, to: $r)")
+
+    }
     sn += 1
   }
 
   def receivePrepareOk(sna: Int, va: String): Unit = {
     prepares += 1
-    value = va
+    if(sna > sn){ //TODO verificar este if, foi adicionado  - nelson
+      sn = sna
+    }
     if (Utils.majority(prepares, replicas)) {
-      replicas.foreach(r => r.acceptorActor ! Accept(sna, value))
+      log.info(s"Send(ACCEPT, $sn, $value) to: all")
+      replicas.foreach(r => r.acceptorActor ! Accept(sn, value))
     }
   }
 }
