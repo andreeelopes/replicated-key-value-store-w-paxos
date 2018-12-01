@@ -15,7 +15,7 @@ class ProposerActor extends Actor with ActorLogging{
 
 
   override def receive: Receive = {
-    case Init(_replicas_) =>
+    case Init(_replicas_, _) =>
       replicas = _replicas_
     case Propose(v) =>
       receivePropose(v)

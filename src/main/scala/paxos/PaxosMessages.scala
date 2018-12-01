@@ -2,7 +2,7 @@ package paxos
 
 import utils.Node
 
-case class Init(membership : Set[Node])
+case class Init(membership : Set[Node], myNode: Node)
 
 case class Propose(value: String)
 
