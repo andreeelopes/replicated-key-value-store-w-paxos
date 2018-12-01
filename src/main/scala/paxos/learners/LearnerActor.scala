@@ -22,17 +22,19 @@ class LearnerActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case AcceptOk(n, v) =>
-      if (n > na) {
-        na = n
-        va = v
-        aset = aset.empty
-      } else if (n < na) return
+      if (n < na) {}
+      else {
+        if (n > na) {
+          na = n
+          va = v
+          aset = aset.empty
+        }
 
-      aset += sender
+        aset += sender
 
-      if (Utils.majority(aset.size, replicas))
-        myNode.smrActor ! DecisionDelivery(va)
-
+        if (Utils.majority(aset.size, replicas))
+          myNode.smrActor ! DecisionDelivery(va)
+      }
   }
 
 }
