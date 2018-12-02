@@ -25,9 +25,9 @@ object Main extends App {
     val bPaxosLearner = a.actorOf(Props[LearnerActor], "bPaxosLearner")
     val cPaxosLearner = a.actorOf(Props[LearnerActor], "cPaxosLearner")
 
-    val aNode = Node("aNode", null, null, aPaxosAcceptor, aPaxosLearner, aPaxosProposer)
-    val bNode = Node("bNode", null, null, bPaxosAcceptor, bPaxosLearner, bPaxosProposer)
-    val cNode = Node("cNode", null, null, cPaxosAcceptor, cPaxosLearner, cPaxosProposer)
+    val aNode = Node("aNode", "1", null, null, aPaxosAcceptor, aPaxosLearner, aPaxosProposer)
+    val bNode = Node("bNode", "2", null, null, bPaxosAcceptor, bPaxosLearner, bPaxosProposer)
+    val cNode = Node("cNode", "3", null, null, cPaxosAcceptor, cPaxosLearner, cPaxosProposer)
 
     val membership = Set(aNode, bNode, cNode)
     //Init
@@ -43,10 +43,10 @@ object Main extends App {
     cPaxosAcceptor ! Init(membership, cNode)
     cPaxosLearner ! Init(membership, cNode)
 
-    println("enviando os proposes")
 
     aNode.proposerActor ! Propose("a")
     bNode.proposerActor ! Propose("b")
+    //Thread.sleep(10000)
     cNode.proposerActor ! Propose("c")
   }
 }

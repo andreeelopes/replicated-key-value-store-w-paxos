@@ -9,7 +9,7 @@ class AcceptorActor extends Actor with ActorLogging {
 
   var np = -1
   var na = -1
-  var va = ""
+  var va = "-1"
 
   var replicas = Set[Node]()
   var myNode: Node = _
@@ -28,11 +28,13 @@ class AcceptorActor extends Actor with ActorLogging {
 
       if (n > np) {
         np = n
-        log.info(s"Send(PREPARE_OK) to: $sender")
+        log.info(s"Send(PREPARE_OK, $na, $va) to: $sender")
         sender ! PrepareOk(na, va)
-      } else
+      }
+      /*else { //TODO replaced with a timer - nelson
         log.info(s"Send(PREPARE_NOT_OK) to: $sender")
-      sender ! PrepareNotOk
+        sender ! PrepareNotOk
+      }*/
 
     case Accept(n, v) =>
       log.info(s"Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
