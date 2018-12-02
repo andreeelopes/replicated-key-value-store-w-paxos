@@ -12,8 +12,9 @@ class LearnerActor extends Actor with ActorLogging {
   var aset = Set[ActorRef]()
   var replicas = Set[Node]()
   var myNode: Node = _
+  var decision: String = ""
 
-  var receivedString = "" //TODO DEBUG only remover -nelson
+  var receivedString = "" //TODO DEBUG only, remove -nelson
 
   override def receive = {
 
@@ -36,8 +37,9 @@ class LearnerActor extends Actor with ActorLogging {
 
         aset += sender
 
-        if (Utils.majority(aset.size, replicas)) {
+        if (Utils.majority(aset.size, replicas) && decision.isEmpty) {
           log.info(s"Decided = $va")
+          decision = va
           receivedString += " " + va
           log.info(receivedString)
         }
