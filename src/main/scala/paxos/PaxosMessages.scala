@@ -14,8 +14,12 @@ object PrepareNotOk
 
 case class Accept(sna: Int, va: String)
 
-case class AcceptOk(sna: Int, va: String)
+case class AcceptOk(sna: Int)
 
-object AcceptNotOk
+case class LockedValue(value: String)
 
 case class DecisionDelivery(decision: String)
+
+object PrepareTimer
+
+object AcceptTimer

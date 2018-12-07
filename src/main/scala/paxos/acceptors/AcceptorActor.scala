@@ -31,10 +31,7 @@ class AcceptorActor extends Actor with ActorLogging {
         log.info(s"Send(PREPARE_OK, $na, $va) to: $sender")
         sender ! PrepareOk(na, va)
       }
-      /*else { //TODO replaced with a timer - nelson
-        log.info(s"Send(PREPARE_NOT_OK) to: $sender")
-        sender ! PrepareNotOk
-      }*/
+
 
     case Accept(n, v) =>
       log.info(s"Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
@@ -42,15 +39,8 @@ class AcceptorActor extends Actor with ActorLogging {
       if (n >= np) {
         na = n
         va = v
-        replicas.foreach {
-          r =>
-            r.learnerActor ! AcceptOk(na, va)
-            log.info(s"Send(ACCEPT_OK , $na, $va) to: $r")
-        }
-      } else {
-        sender ! AcceptNotOk
-        log.info(s"Send(ACCEPT_NOT_OK) to: $sender")
-
+        sender ! AcceptOk(na)
+        log.info(s"Send(ACCEPT_OK , $na) to: $sender")
       }
 
   }

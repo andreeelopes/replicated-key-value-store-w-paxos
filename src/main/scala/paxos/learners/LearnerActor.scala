@@ -1,20 +1,15 @@
 package paxos.learners
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import paxos.{AcceptOk, DecisionDelivery, Init}
+import paxos.{AcceptOk, DecisionDelivery, Init, LockedValue}
 import statemachinereplication.updateReplicas
 import utils.{Node, Utils}
 
 class LearnerActor extends Actor with ActorLogging {
 
-  var na = -1
-  var va = ""
-  var aset = Set[ActorRef]()
-  var replicas = Set[Node]()
+  var replicas: Set[Node] = _
   var myNode: Node = _
-  var decision: String = ""
-
-  var receivedString = "" //TODO DEBUG only, remove -nelson
+  var decided: Boolean = false
 
   override def receive = {
 
@@ -24,28 +19,16 @@ class LearnerActor extends Actor with ActorLogging {
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
 
-    case AcceptOk(n, v) =>
-      log.info(s"Receive(ACCEPT_OK, $n, $v)")
+    case LockedValue(value) =>
+      log.info(s"Receive(LOCKED_VALUE, $value) from: $sender")
 
-      if (n < na) {}
-      else {
-        if (n > na) {
-          na = n
-          va = v
-          aset = aset.empty
-        }
-
-        aset += sender
-
-        if (Utils.majority(aset.size, replicas) && decision.isEmpty) {
-          log.info(s"Decided = $va")
-          decision = va
-          receivedString += " " + va
-          log.info(receivedString)
-        }
-        //myNode.smrActor ! DecisionDelivery(va)
+      if (!decided) {
+        log.info(s"I learner $myNode have decided = $value")
+        decided = true
+        //myNode.smrActor ! DecisionDelivery(value)
       }
   }
+
 
 }
 
