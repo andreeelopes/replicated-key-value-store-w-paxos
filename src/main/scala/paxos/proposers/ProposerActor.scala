@@ -30,6 +30,8 @@ class ProposerActor extends Actor with ActorLogging {
 
   var myNode: Node = _
 
+  var flag: Boolean = false
+
   override def receive: Receive = {
     case Init(_replicas_, _myNode_) =>
       replicas = _replicas_
@@ -37,25 +39,31 @@ class ProposerActor extends Actor with ActorLogging {
       snFactory = new SequenceNumber(myNode.getNodeID)
 
     case Propose(v) =>
-      log.info(s"Propose($v)")
+      log.info(s"[${System.nanoTime()}]  Propose($v)")
       receivePropose(v)
 
     case PrepareOk(sna, va) =>
-      log.info(s"Receive(PREPARE_OK, $sna, $va)")
+      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va) | state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
       receivePrepareOk(sna, va)
 
     case AcceptOk(sna) =>
-      log.info(s"Receive(ACCEPT_OK, $sna)")
+      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna)")
       receiveAcceptOk(sna)
 
     case PrepareTimer =>
-      log.info(s"Prepare timer fired")
-      receivePropose(value) //TODO voltar a por, foi so para debug que se desactivou -nelson
+      flag = false
+      prepares = 0
+      accepts = 0
+      log.info(s"[${System.nanoTime()}]  Prepare timer fired")
+      receivePropose(value)
 
     case AcceptTimer =>
-      log.info(s"Accept timer fired")
+      flag = false
+      prepares = 0
+      accepts = 0
+      log.info(s"[${System.nanoTime()}]  Accept timer fired")
       context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, Propose(value))
-    //receivePropose(value) //TODO voltar a por, foi so para debug que se desactivou -nelson
+      receivePropose(value)
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
@@ -66,8 +74,8 @@ class ProposerActor extends Actor with ActorLogging {
   def receivePropose(v: String): Unit = {
     value = v
     sn = snFactory.getSN()
-    log.info(s"Send(PREPARE,$sn) to: all acceptors")
-    replicas.foreach(r =>r.acceptorActor ! Prepare(sn))
+    log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
+    replicas.foreach(r => r.acceptorActor ! Prepare(sn))
     prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, PrepareTimer)
   }
 
@@ -78,15 +86,16 @@ class ProposerActor extends Actor with ActorLogging {
       lockedValue = va
     }
 
-    if (Utils.majority(prepares, replicas)) {
+    if (Utils.majority(prepares, replicas) && !flag) {
+      flag = true
       prepareTimer.cancel()
 
-      var valueToAccept = value
-      if (lockedInValue())
-        valueToAccept = lockedValue
+      if (lockedInValue()) {
+        value = lockedValue
+      }
 
-      log.info(s"Send(ACCEPT, $sn, $valueToAccept) to: all")
-      replicas.foreach(r => r.acceptorActor ! Accept(sn, valueToAccept))
+      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, $sn, $value) to: all")
+      replicas.foreach(r => r.acceptorActor ! Accept(sn, value))
       acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.SECONDS), self, AcceptTimer)
     }
   }

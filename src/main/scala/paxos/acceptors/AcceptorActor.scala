@@ -24,23 +24,23 @@ class AcceptorActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case Prepare(n) =>
-      log.info(s"Receive(PREPARE, $n) from: $sender")
+      log.info(s"[${System.nanoTime()}]  Receive(PREPARE, $n) from: $sender")
 
       if (n > np) {
         np = n
-        log.info(s"Send(PREPARE_OK, $na, $va) to: $sender")
+        log.info(s"[${System.nanoTime()}]  Send(PREPARE_OK, $na, $va) to: $sender")
         sender ! PrepareOk(na, va)
       }
 
 
     case Accept(n, v) =>
-      log.info(s"Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
+      log.info(s"[${System.nanoTime()}]  Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
 
       if (n >= np) {
         na = n
         va = v
         sender ! AcceptOk(na)
-        log.info(s"Send(ACCEPT_OK , $na) to: $sender")
+        log.info(s"[${System.nanoTime()}]  Send(ACCEPT_OK , $na) to: $sender")
       }
 
   }
