@@ -5,11 +5,14 @@ import multidimensionalpaxos.{Init, LockedValue}
 import statemachinereplication.updateReplicas
 import utils.Node
 
+case class LearnerInstance(var decided: Boolean = false, var i: Long)
+
 class LearnerActor extends Actor with ActorLogging {
 
   var replicas: Set[Node] = _
   var myNode: Node = _
-  var learnerInstances: Map[Long, Boolean] = Map() //[instance, decided]
+  var learnerInstances: Map[Long, LearnerInstance] = Map()
+
 
   override def receive = {
 
@@ -21,14 +24,21 @@ class LearnerActor extends Actor with ActorLogging {
 
     case LockedValue(value, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
+      learnerInstances += (i -> receiveLockedValue(learnerInstances(i), value))
 
-      if (!learnerInstances(i)) {
-        log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=$i)")
-        learnerInstances(i) = true
-        //myNode.smrActor ! DecisionDelivery(value, i)
-      }
+
   }
 
+  def receiveLockedValue(iLearner: LearnerInstance, value: String) = {
+    if (!iLearner.decided) {
+      iLearner.decided = true
+
+      log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=${iLearner.i})")
+      //myNode.smrActor ! DecisionDelivery(value, iLearner.i)
+    }
+
+    iLearner
+  }
 
 }
 
