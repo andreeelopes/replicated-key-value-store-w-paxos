@@ -1,14 +1,11 @@
-import java.rmi.server.Operation
-
-import akka.actor.{ActorSystem, PoisonPill, Props}
-import multidimensionalpaxos.{Init, Propose}
-import multidimensionalpaxos.acceptors.AcceptorActor
-import multidimensionalpaxos.learners.LearnerActor
-import multidimensionalpaxos.proposers.ProposerActor
-import statemachinereplication.{Event, Get}
+import akka.actor.{ActorSystem, Props}
+import paxos.Init
+import paxos.acceptors.AcceptorActor
+import paxos.learners.LearnerActor
+import paxos.proposers.ProposerActor
 import utils.Node
 
-object MultidimPaxosMain extends App {
+object StateMachineReplicationMain extends App {
 
   override def main(args: Array[String]) = {
 
@@ -74,13 +71,6 @@ object MultidimPaxosMain extends App {
     fPaxosLearner ! Init(membership, fNode)
 
 
-    //Test
-    aNode.proposerActor ! Propose(Event(Get("a1", "a1mid"), "a1mid", aNode.smrActor), 1)
-    bNode.proposerActor ! Propose(Event(Get("b1", "b1mid"), "b1mid", bNode.smrActor), 1)
-
-
-    //    aNode.proposerActor ! Propose(Event(Get("a2", "a2mid"), "a2mid", aNode.smrActor), 2)
-
-
   }
+
 }

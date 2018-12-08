@@ -11,10 +11,11 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   val NotDefined = "NA"
 
   var history = Map[Long, Event]() // array that contains the history of operations [i, (op, returnValue, mid)]
-  var current = 0 // current op
+  var current: Long = 0 // current op
   var store = Map[String, String]() // key value store
   var toBeProposed = Queue[Event]() // queue with ops to be proposed (op, sender, mid)
   var proposed = Set[String]()
+  var historyProcessed = false
 
   var replicas = Set[Node]()
 
@@ -33,6 +34,9 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
     case DecisionDelivery(decision: Event, instance) =>
       receiveDecision(decision, instance)
+
+    case h: History =>
+      executeHistory(h.history, h.index)
   }
 
 
@@ -41,47 +45,121 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   }
 
   def receiveUpdateOp(op: Operation): Unit = {
-    if (!proposed.contains(op.mid))
-    {
+    if (!proposed.contains(op.mid)) {
       proposed += op.mid
-      toBeProposed.enqueue(Event(op, op.mid, sender))
+      toBeProposed = toBeProposed.enqueue(Event(op, op.mid, sender))
 
-      if(current == 0)
+      if (current == 0)
         myNode.proposerActor ! Propose(toBeProposed.head, current)
     }
-    else
-    {
-      val eventOpt = history.values.find(e =>  e.mid.equals(op.mid))
-      if(eventOpt.isDefined){
+    else {
+      val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
+      if (eventOpt.isDefined) {
 
         sender ! Reply(eventOpt.get)
       }
     }
   }
 
-  def receiveDecision(op: Event, i: Long): Unit = {
-    current += 1
+  def receiveDecision(op: Event, i: Long): Unit = { //TODO podera decidir duas vezes?
+    history += (i -> op)
+
+    if (toBeProposed.nonEmpty && toBeProposed.head.equals(op))
+      toBeProposed = toBeProposed.dequeue._2
+
+    if (toBeProposed.nonEmpty) {
+      current = findValidIndex()
+      myNode.proposerActor ! Propose(toBeProposed.head, current)
+    }
+
+    if (previousCompleted(i))
+      executeOp(op, i)
   }
 
 
   //Procedures
 
-  private def executeOp(op: Event, index: Long) = {
+  private def executeOp(event: Event, index: Long) = {
+    var oldValue = _
+    event.op match {
+      case Put(key, value, _) =>
+        oldValue = store.getOrElse(key, NotDefined)
+        store += (key -> value)
+        history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
+      case AddReplica(replica, _) =>
+        oldValue = index
+        replicas += replica
+        updatePaxosReplicas()
+        replica.smrActor ! History(history, index)
+
+      case RemoveReplica(replica, _) =>
+        oldValue = index
+        replicas -= replica
+        updatePaxosReplicas()
+
+    }
+
+    history += (index -> history(index).copy(executed = true, returnValue = oldValue))
+    event.sender ! Reply(event)
   }
 
-  private def executeHistory(history: Map[Long, Event]) = {
-
+  private def updatePaxosReplicas(): Unit = {
+    myNode.acceptorActor ! UpdateReplicas(replicas)
+    myNode.learnerActor ! UpdateReplicas(replicas)
+    myNode.proposerActor ! UpdateReplicas(replicas)
   }
 
+  private def executeHistory(_history_ : Map[Long, Event], index: Long): Unit = {
+
+    if (!historyProcessed) {
+      historyProcessed = true
+      _history_.foreach { p =>
+        val event = p._2
+        var oldValue = _
+        event.op match {
+          case Put(key, value, _) =>
+            oldValue = store.getOrElse(key, NotDefined)
+            store += (key -> value)
+            history += (index -> history(index).copy(executed = true, returnValue = oldValue))
+
+          case AddReplica(replica, _) =>
+            oldValue = index
+            replicas += replica
+            updatePaxosReplicas()
+
+          case RemoveReplica(replica, _) =>
+            oldValue = index
+            replicas -= replica
+            updatePaxosReplicas()
+        }
+        history += (index -> history(index).copy(executed = true, returnValue = oldValue))
+      }
+    }
+  }
+
+  /**
+    *
+    * @param index
+    * @return
+    */
   private def previousCompleted(index: Long): Boolean = {
-
+    for (i <- 0 to index) {
+      if (history.get(i).isEmpty)
+        return false
+      if (!history(i).executed)
+        executeOp(history(i), i)
+    }
     true
   }
 
   private def findValidIndex(): Long = {
-
-    0
+    val maxKey = history.keys.max
+    for (i <- 0 to maxKey) {
+      if (history.get(i).isEmpty)
+        return i
+    }
+    maxKey + 1
   }
 
 }

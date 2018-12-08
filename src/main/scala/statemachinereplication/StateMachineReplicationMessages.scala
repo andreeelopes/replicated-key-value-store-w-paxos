@@ -3,9 +3,9 @@ package statemachinereplication
 import akka.actor.ActorRef
 import utils.Node
 
-case class updateReplicas(replicas: Set[Node])
+case class UpdateReplicas(replicas: Set[Node])
 
-case class Event(op: Operation, mid: String, sender: ActorRef, var returnValue: String = null)
+case class Event(op: Operation, mid: String, sender: ActorRef, var executed: Boolean = false, var returnValue: String = null)
 
 abstract class Operation{
   def mid: String
