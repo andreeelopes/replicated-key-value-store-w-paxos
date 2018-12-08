@@ -24,8 +24,7 @@ class LearnerActor extends Actor with ActorLogging {
 
     case LockedValue(value, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
-      learnerInstances += (i -> receiveLockedValue(learnerInstances(i), value))
-
+      learnerInstances += (i -> receiveLockedValue(learnerInstances.getOrElse(i, LearnerInstance(i = i)), value))
 
   }
 

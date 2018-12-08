@@ -30,7 +30,7 @@ class ProposerActor extends Actor with ActorLogging {
 
   var myNode: Node = _
 
-  var prepareMajority: Boolean = false
+  var prevMajority: Boolean = false
 
   override def receive: Receive = {
     case Init(_replicas_, _myNode_) =>
@@ -86,9 +86,9 @@ class ProposerActor extends Actor with ActorLogging {
       lockedValue = va
     }
 
-    if (Utils.majority(prepares, replicas) && !prepareMajority) {
+    if (Utils.majority(prepares, replicas) && !prevMajority) {
       prepareTimer.cancel()
-      prepareMajority = true
+      prevMajority = true
 
       if (lockedInValue()) {
         value = lockedValue
@@ -123,7 +123,7 @@ class ProposerActor extends Actor with ActorLogging {
     * Resets the variables (majority, prepares and accepts) associate with Paxos
     */
   private def resetState(): Unit = {
-    prepareMajority = false
+    prevMajority = false
     prepares = 0
     accepts = 0
   }
