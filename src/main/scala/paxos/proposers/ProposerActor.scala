@@ -30,7 +30,7 @@ class ProposerActor extends Actor with ActorLogging {
 
   var myNode: Node = _
 
-  var majority: Boolean = false
+  var prepareMajority: Boolean = false
 
   override def receive: Receive = {
     case Init(_replicas_, _myNode_) =>
@@ -39,38 +39,44 @@ class ProposerActor extends Actor with ActorLogging {
       snFactory = new SequenceNumber(myNode.getNodeID)
 
     case Propose(v) =>
-      log.info(s"[${System.nanoTime()}]  Propose($v)")
       receivePropose(v)
+      log.info(s"[${System.nanoTime()}]  Propose($v) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case PrepareOk(sna, va) =>
-      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va) | state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
       receivePrepareOk(sna, va)
+      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case AcceptOk(sna) =>
-      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna)")
       receiveAcceptOk(sna)
+      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case PrepareTimer =>
-      log.info(s"[${System.nanoTime()}]  Prepare timer fired")
       receivePropose(value)
+      log.info(s"[${System.nanoTime()}]  Prepare timer fired | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case AcceptTimer =>
-      log.info(s"[${System.nanoTime()}]  Accept timer fired")
       receivePropose(value)
+      log.info(s"[${System.nanoTime()}]  Accept timer fired | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
-
+      log.info(s"[${System.nanoTime()}]  Receive(UPDATE_REPLICAS, $_replicas_) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
   }
 
 
   def receivePropose(v: String): Unit = {
-    resetState
+    resetState()
     value = v
     sn = snFactory.getSN()
-    log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
     replicas.foreach(r => r.acceptorActor ! Prepare(sn))
     prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, PrepareTimer)
+    log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
   }
 
   def receivePrepareOk(sna: Int, va: String): Unit = {
@@ -80,17 +86,17 @@ class ProposerActor extends Actor with ActorLogging {
       lockedValue = va
     }
 
-    if (Utils.majority(prepares, replicas) && !majority) {
-      majority = true
+    if (Utils.majority(prepares, replicas) && !prepareMajority) {
       prepareTimer.cancel()
+      prepareMajority = true
 
       if (lockedInValue()) {
         value = lockedValue
       }
 
-      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, $sn, $value) to: all")
       replicas.foreach(r => r.acceptorActor ! Accept(sn, value))
       acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.SECONDS), self, AcceptTimer)
+      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, $sn, $value) to: all")
     }
   }
 
@@ -99,6 +105,7 @@ class ProposerActor extends Actor with ActorLogging {
     if (Utils.majority(accepts, replicas)) {
       acceptTimer.cancel()
       replicas.foreach(r => r.learnerActor ! LockedValue(value))
+      log.info(s"[${System.nanoTime()}]  Send(LOCKED_VALUE, $value) to: all")
     }
   }
 
@@ -116,7 +123,7 @@ class ProposerActor extends Actor with ActorLogging {
     * Resets the variables (majority, prepares and accepts) associate with Paxos
     */
   private def resetState(): Unit = {
-    majority = false
+    prepareMajority = false
     prepares = 0
     accepts = 0
   }

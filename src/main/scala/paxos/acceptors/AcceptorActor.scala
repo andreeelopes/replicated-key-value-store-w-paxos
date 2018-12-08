@@ -28,8 +28,8 @@ class AcceptorActor extends Actor with ActorLogging {
 
       if (n > np) {
         np = n
-        log.info(s"[${System.nanoTime()}]  Send(PREPARE_OK, $na, $va) to: $sender")
         sender ! PrepareOk(na, va)
+        log.info(s"[${System.nanoTime()}]  Send(PREPARE_OK, $na, $va) to: $sender")
       }
 
 
@@ -42,7 +42,5 @@ class AcceptorActor extends Actor with ActorLogging {
         sender ! AcceptOk(na)
         log.info(s"[${System.nanoTime()}]  Send(ACCEPT_OK , $na) to: $sender")
       }
-
   }
-
 }
