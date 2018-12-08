@@ -2,7 +2,7 @@ package multidimensionalpaxos.acceptors
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import multidimensionalpaxos._
-import statemachinereplication.updateReplicas
+import statemachinereplication.{Event, Operation, updateReplicas}
 import utils.Node
 
 /**
@@ -10,7 +10,7 @@ import utils.Node
   * @param na highest accept
   * @param va highest accept val
   */
-case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: String = "-1", var i: Long) { //TODO martelo
+case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: Event = null, var i: Long) {
   override def toString = s"{np=$np, na=$na, va=$na}"
 }
 
@@ -51,7 +51,7 @@ class AcceptorActor extends Actor with ActorLogging {
     iAcceptor
   }
 
-  def receiveAccept(iAcceptor: AcceptorInstance, n: Int, v: String) = {
+  def receiveAccept(iAcceptor: AcceptorInstance, n: Int, v: Event) = {
     if (n >= iAcceptor.np) {
       iAcceptor.na = n
       iAcceptor.va = v

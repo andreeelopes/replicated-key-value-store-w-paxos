@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
 import multidimensionalpaxos._
-import statemachinereplication.updateReplicas
+import statemachinereplication.{Event, updateReplicas}
 import utils.{Node, SequenceNumber, Utils}
 
 import scala.concurrent._
@@ -19,10 +19,10 @@ import scala.concurrent.duration.Duration
   * @param highestSna  highest sna seen so far on received prepare ok messages
   * @param lockedValue value corresponding to the highestSna received
   */
-case class ProposerInstance(var sn: Int = _, var value: String = "", var prepares: Int = 0,
+case class ProposerInstance(var sn: Int = -1, var value: Event = null, var prepares: Int = 0,
                             var accepts: Int = 0, var highestSna: Int = -1,
-                            var lockedValue: String = "-1", var prevMajority: Boolean = false,
-                            var prepareTimer: Cancellable = _, var acceptTimer: Cancellable = _, var i: Long) {
+                            var lockedValue: Event = null, var prevMajority: Boolean = false,
+                            var prepareTimer: Cancellable = null, var acceptTimer: Cancellable = null, var i: Long) {
 
   override def toString = s"{sn=$sn, value=$value, prepares=$prepares, " +
     s"accepts=$accepts, highestSna=$highestSna, lockedValue=$lockedValue}"
@@ -76,7 +76,7 @@ class ProposerActor extends Actor with ActorLogging {
   }
 
 
-  def receivePropose(iProposer: ProposerInstance, v: String) = {
+  def receivePropose(iProposer: ProposerInstance, v: Event) = {
 
     resetState(iProposer)
     iProposer.value = v
@@ -89,9 +89,9 @@ class ProposerActor extends Actor with ActorLogging {
     iProposer
   }
 
-  def receivePrepareOk(iProposer: ProposerInstance, sna: Int, va: String) = {
+  def receivePrepareOk(iProposer: ProposerInstance, sna: Int, va: Event) = {
     iProposer.prepares += 1
-    if (sna > iProposer.highestSna && va != "-1") {
+    if (sna > iProposer.highestSna && va != null) {
       iProposer.highestSna = sna
       iProposer.lockedValue = va
     }
@@ -100,7 +100,7 @@ class ProposerActor extends Actor with ActorLogging {
       iProposer.prevMajority = true
       iProposer.prepareTimer.cancel()
 
-      if (lockedInValue(iProposer.sn, iProposer.i)) { //sn or sna?
+      if (lockedInValue(iProposer.highestSna, iProposer.i)) {
         iProposer.value = iProposer.lockedValue
       }
 

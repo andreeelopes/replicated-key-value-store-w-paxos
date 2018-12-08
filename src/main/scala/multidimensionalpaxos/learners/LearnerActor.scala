@@ -2,7 +2,7 @@ package multidimensionalpaxos.learners
 
 import akka.actor.{Actor, ActorLogging}
 import multidimensionalpaxos.{Init, LockedValue}
-import statemachinereplication.updateReplicas
+import statemachinereplication.{Event, Operation, updateReplicas}
 import utils.Node
 
 case class LearnerInstance(var decided: Boolean = false, var i: Long)
@@ -28,7 +28,7 @@ class LearnerActor extends Actor with ActorLogging {
 
   }
 
-  def receiveLockedValue(iLearner: LearnerInstance, value: String) = {
+  def receiveLockedValue(iLearner: LearnerInstance, value: Event) = {
     if (!iLearner.decided) {
       iLearner.decided = true
 

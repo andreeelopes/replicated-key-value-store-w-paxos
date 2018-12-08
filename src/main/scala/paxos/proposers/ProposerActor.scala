@@ -65,7 +65,7 @@ class ProposerActor extends Actor with ActorLogging {
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
-      log.info(s"[${System.nanoTime()}]  Receive(UPDATE_REPLICAS, $_replicas_) | " +
+      log.info(s"[${System.nanoTime()}]  Receive(UPDATE_REPLICAS, $replicas) | " +
         s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
   }
 
