@@ -1,15 +1,15 @@
 package paxos.learners
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import paxos.{AcceptOk, DecisionDelivery, Init, LockedValue}
+import akka.actor.{Actor, ActorLogging}
+import paxos.{Init, LockedValue}
 import statemachinereplication.updateReplicas
-import utils.{Node, Utils}
+import utils.Node
 
 class LearnerActor extends Actor with ActorLogging {
 
   var replicas: Set[Node] = _
   var myNode: Node = _
-  var decided: Boolean = false
+  var learnerInstances: Map[Long, Boolean] = Map() //[instance, decided]
 
   override def receive = {
 
@@ -19,13 +19,13 @@ class LearnerActor extends Actor with ActorLogging {
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
 
-    case LockedValue(value) =>
-      log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value) from: $sender")
+    case LockedValue(value, i) =>
+      log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
 
-      if (!decided) {
-        log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = $value")
-        decided = true
-        //myNode.smrActor ! DecisionDelivery(value)
+      if (!learnerInstances(i)) {
+        log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=$i)")
+        learnerInstances(i) = true
+        //myNode.smrActor ! DecisionDelivery(value, i)
       }
   }
 
