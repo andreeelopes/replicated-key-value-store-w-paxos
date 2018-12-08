@@ -103,8 +103,8 @@ class ProposerActor extends Actor with ActorLogging {
   def receiveAcceptOk(sna: Int): Unit = {
     accepts += 1
     if (Utils.majority(accepts, replicas)) {
-      myNode.learnerActor ! LockedValue(value)
       acceptTimer.cancel()
+      replicas.foreach(r => r.learnerActor ! LockedValue(value))
     }
   }
 

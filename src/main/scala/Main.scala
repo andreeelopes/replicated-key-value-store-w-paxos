@@ -45,8 +45,8 @@ object Main extends App {
 
 
     aNode.proposerActor ! Propose("a")
-    //    bNode.proposerActor ! Propose("b")
+    bNode.proposerActor ! Propose("b")
     //Thread.sleep(10000)
-    // cNode.proposerActor ! Propose("c")
+    cNode.proposerActor ! Propose("c")
   }
 }
