@@ -32,11 +32,11 @@ class AcceptorActor extends Actor with ActorLogging {
 
     case Prepare(n, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(PREPARE, $n, $i) from: $sender")
-      acceptorInstances += (i -> receivePrepare(acceptorInstances(i), n)) //TODO deal with not existing instance
+      acceptorInstances += (i -> receivePrepare(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n))
 
     case Accept(n, v, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(Accept, $n, $v, $i) | State($i) = ${acceptorInstances(i)}")
-      acceptorInstances += (i -> receiveAccept(acceptorInstances(i), n, v))
+      acceptorInstances += (i -> receiveAccept(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n, v))
 
   }
 

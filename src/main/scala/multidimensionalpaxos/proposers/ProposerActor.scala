@@ -19,9 +19,9 @@ import scala.concurrent.duration.Duration
   * @param highestSna  highest sna seen so far on received prepare ok messages
   * @param lockedValue value corresponding to the highestSna received
   */
-case class ProposerInstance(var sn: Int, var value: String = "", var prepares: Int = 0,
+case class ProposerInstance(var sn: Int = _, var value: String = "", var prepares: Int = 0,
                             var accepts: Int = 0, var highestSna: Int = -1,
-                            var lockedValue: String = "-1", var majority: Boolean = false,
+                            var lockedValue: String = "-1", var prevMajority: Boolean = false,
                             var prepareTimer: Cancellable = _, var acceptTimer: Cancellable = _, var i: Long) {
 
   override def toString = s"{sn=$sn, value=$value, prepares=$prepares, " +
@@ -42,7 +42,7 @@ class ProposerActor extends Actor with ActorLogging {
 
   var myNode: Node = _
 
-  override def receive: Receive = {
+  override def receive = {
     case Init(_replicas_, _myNode_) =>
       replicas = _replicas_
       myNode = _myNode_
@@ -50,23 +50,25 @@ class ProposerActor extends Actor with ActorLogging {
 
     case Propose(v, i) =>
       log.info(s"[${System.nanoTime()}]  Propose($v, $i)")
-      proposerInstances += (i -> receivePropose(proposerInstances(i), v))
+      proposerInstances += (i -> receivePropose(proposerInstances.getOrElse(i, ProposerInstance(i = i)), v))
 
     case PrepareOk(sna, va, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va, $i) | State($i) = ${proposerInstances(i)}")
-      proposerInstances += (i -> receivePrepareOk(proposerInstances(i), sna, va))
+      proposerInstances += (i -> receivePrepareOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna, va))
 
     case AcceptOk(sna, i) =>
       log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna, $i)")
-      proposerInstances += (i -> receiveAcceptOk(proposerInstances(i), sna))
+      proposerInstances += (i -> receiveAcceptOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna))
 
     case PrepareTimer(i) =>
       log.info(s"[${System.nanoTime()}]  Prepare timer fired, i=$i")
-      proposerInstances += (i -> receivePropose(proposerInstances(i), proposerInstances(i).value))
+      val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
+      proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
     case AcceptTimer(i) =>
       log.info(s"[${System.nanoTime()}]  Accept timer fired, i=$i")
-      proposerInstances += (i -> receivePropose(proposerInstances(i), proposerInstances(i).value))
+      val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
+      proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
@@ -94,8 +96,8 @@ class ProposerActor extends Actor with ActorLogging {
       iProposer.lockedValue = va
     }
 
-    if (Utils.majority(iProposer.prepares, replicas) && !iProposer.majority) { //TODO bad name for the flag
-      iProposer.majority = true
+    if (Utils.majority(iProposer.prepares, replicas) && !iProposer.prevMajority) {
+      iProposer.prevMajority = true
       iProposer.prepareTimer.cancel()
 
       if (lockedInValue(iProposer.sn, iProposer.i)) { //sn or sna?
@@ -134,7 +136,7 @@ class ProposerActor extends Actor with ActorLogging {
     * Resets the variables (majority, prepares and accepts) associate with Paxos
     */
   private def resetState(iProposer: ProposerInstance) = {
-    iProposer.majority = false
+    iProposer.prevMajority = false
     iProposer.prepares = 0
     iProposer.accepts = 0
 
