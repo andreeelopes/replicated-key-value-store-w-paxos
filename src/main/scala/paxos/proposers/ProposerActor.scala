@@ -30,7 +30,7 @@ class ProposerActor extends Actor with ActorLogging {
 
   var myNode: Node = _
 
-  var flag: Boolean = false
+  var majority: Boolean = false
 
   override def receive: Receive = {
     case Init(_replicas_, _myNode_) =>
@@ -51,18 +51,11 @@ class ProposerActor extends Actor with ActorLogging {
       receiveAcceptOk(sna)
 
     case PrepareTimer =>
-      flag = false
-      prepares = 0
-      accepts = 0
       log.info(s"[${System.nanoTime()}]  Prepare timer fired")
       receivePropose(value)
 
     case AcceptTimer =>
-      flag = false
-      prepares = 0
-      accepts = 0
       log.info(s"[${System.nanoTime()}]  Accept timer fired")
-      context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, Propose(value))
       receivePropose(value)
 
     case updateReplicas(_replicas_) =>
@@ -72,6 +65,7 @@ class ProposerActor extends Actor with ActorLogging {
 
 
   def receivePropose(v: String): Unit = {
+    resetState
     value = v
     sn = snFactory.getSN()
     log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
@@ -86,8 +80,8 @@ class ProposerActor extends Actor with ActorLogging {
       lockedValue = va
     }
 
-    if (Utils.majority(prepares, replicas) && !flag) {
-      flag = true
+    if (Utils.majority(prepares, replicas) && !majority) {
+      majority = true
       prepareTimer.cancel()
 
       if (lockedInValue()) {
@@ -116,5 +110,14 @@ class ProposerActor extends Actor with ActorLogging {
     */
   private def lockedInValue(): Boolean = {
     highestSna != -1
+  }
+
+  /**
+    * Resets the variables (majority, prepares and accepts) associate with Paxos
+    */
+  private def resetState(): Unit = {
+    majority = false
+    prepares = 0
+    accepts = 0
   }
 }
