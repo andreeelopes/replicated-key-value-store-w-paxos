@@ -1,8 +1,8 @@
 import akka.actor.{ActorSystem, PoisonPill, Props}
-import paxos.{Init, Propose}
-import paxos.acceptors.AcceptorActor
-import paxos.learners.LearnerActor
-import paxos.proposers.ProposerActor
+import multidimensionalpaxos.{Init, Propose}
+import multidimensionalpaxos.acceptors.AcceptorActor
+import multidimensionalpaxos.learners.LearnerActor
+import multidimensionalpaxos.proposers.ProposerActor
 import utils.Node
 
 object Main extends App {

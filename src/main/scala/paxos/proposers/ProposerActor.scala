@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
 import paxos._
-import paxos.acceptors.AcceptorInstances
 import statemachinereplication.updateReplicas
 import utils.{Node, SequenceNumber, Utils}
 
@@ -12,36 +11,26 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
-/**
-  * @param sn          current sn
-  * @param value       value to be proposed
-  * @param prepares    number of received prepares_ok
-  * @param accepts     number of received accepts_ok
-  * @param highestSna  highest sna seen so far on received prepare ok messages
-  * @param lockedValue value corresponding to the highestSna received
-  */
-case class ProposerInstances(sn: Int, value: String = "", prepares: Int = 0,
-                             accepts: Int = 0, highestSna: Int = -1,
-                             lockedValue: Int = -1, majority: Boolean = false,
-                             prepareTimer: Cancellable = _, acceptTimer: Cancellable = _) {
-
-  override def toString = s"{sn=$sn, value=$value, prepares=$prepares, " +
-    s"accepts=$accepts, highestSna=$highestSna, lockedValue=$lockedValue}"
-}
-
 class ProposerActor extends Actor with ActorLogging {
-
   //state
-
-  var proposerInstances = Map[Long, ProposerInstances]()
-
   val PrepareTimeout = 1 //secs
   val AcceptTimeout = 1 //secs
 
   var replicas = Set[Node]()
   var snFactory: SequenceNumber = _ // sequence number of the proposed value
+  var sn: Int = _
+  var value = "" // value to be proposed
+  var prepares = 0 // number of received prepares_ok
+  var highestSna = -1 // highest sna seen so far on received prepare ok messages
+  var lockedValue = "-1" // value corresponding to the highestSna received
+  var accepts = 0 // number of received accepts_ok
+
+  var prepareTimer: Cancellable = _
+  var acceptTimer: Cancellable = _
 
   var myNode: Node = _
+
+  var prepareMajority: Boolean = false
 
   override def receive: Receive = {
     case Init(_replicas_, _myNode_) =>
@@ -49,72 +38,74 @@ class ProposerActor extends Actor with ActorLogging {
       myNode = _myNode_
       snFactory = new SequenceNumber(myNode.getNodeID)
 
-    case Propose(v, i) =>
-      log.info(s"[${System.nanoTime()}]  Propose($v, $i)")
-      receivePropose(v, i)
+    case Propose(v) =>
+      receivePropose(v)
+      log.info(s"[${System.nanoTime()}]  Propose($v) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
-    case PrepareOk(sna, va, i) =>
-      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va, $i) | State($i) = ${proposerInstances(i)}")
+    case PrepareOk(sna, va) =>
+      receivePrepareOk(sna, va)
+      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
-      receivePrepareOk(sna, va, i)
+    case AcceptOk(sna) =>
+      receiveAcceptOk(sna)
+      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
-    case AcceptOk(sna, i) =>
-      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna, $i)")
-      receiveAcceptOk(sna, i)
+    case PrepareTimer =>
+      receivePropose(value)
+      log.info(s"[${System.nanoTime()}]  Prepare timer fired | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
-    case PrepareTimer(i) =>
-      log.info(s"[${System.nanoTime()}]  Prepare timer fired, i=$i")
-      receivePropose(proposerInstances(i).value, i)
-
-    case AcceptTimer(i) =>
-      log.info(s"[${System.nanoTime()}]  Accept timer fired, i=$i")
-      receivePropose(proposerInstances(i).value, i)
+    case AcceptTimer =>
+      receivePropose(value)
+      log.info(s"[${System.nanoTime()}]  Accept timer fired | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case updateReplicas(_replicas_) =>
       replicas = _replicas_
-
+      log.info(s"[${System.nanoTime()}]  Receive(UPDATE_REPLICAS, $_replicas_) | " +
+        s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
   }
 
 
-  def receivePropose(v: String, i: Int): Unit = {
-    val iPropose = proposerInstances(i)
-
-    proposerInstances += (i -> iPropose.copy(value = v))
-//    proposerInstances += (i ->
-//      iPropose.copy(value = v,  sn = snFactory.getSN(), va = v, majority = false, prepares = 0, accepts = 0)
-
-
-    log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
+  def receivePropose(v: String): Unit = {
+    resetState()
+    value = v
+    sn = snFactory.getSN()
     replicas.foreach(r => r.acceptorActor ! Prepare(sn))
     prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, PrepareTimer)
+    log.info(s"[${System.nanoTime()}]  Send(PREPARE,$sn) to: all acceptors")
   }
 
-  def receivePrepareOk(sna: Int, va: String, i: Int): Unit = {
+  def receivePrepareOk(sna: Int, va: String): Unit = {
     prepares += 1
     if (sna > highestSna && va != "-1") {
       highestSna = sna
       lockedValue = va
     }
 
-    if (Utils.majority(prepares, replicas) && !majority) {
-      majority = true
+    if (Utils.majority(prepares, replicas) && !prepareMajority) {
       prepareTimer.cancel()
+      prepareMajority = true
 
       if (lockedInValue()) {
         value = lockedValue
       }
 
-      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, $sn, $value) to: all")
       replicas.foreach(r => r.acceptorActor ! Accept(sn, value))
       acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.SECONDS), self, AcceptTimer)
+      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, $sn, $value) to: all")
     }
   }
 
-  def receiveAcceptOk(sna: Int, i: Int): Unit = {
+  def receiveAcceptOk(sna: Int): Unit = {
     accepts += 1
     if (Utils.majority(accepts, replicas)) {
       acceptTimer.cancel()
       replicas.foreach(r => r.learnerActor ! LockedValue(value))
+      log.info(s"[${System.nanoTime()}]  Send(LOCKED_VALUE, $value) to: all")
     }
   }
 
@@ -124,15 +115,15 @@ class ProposerActor extends Actor with ActorLogging {
     *
     * @return
     */
-  private def lockedInValue(i: Int): Boolean = {
+  private def lockedInValue(): Boolean = {
     highestSna != -1
   }
 
   /**
     * Resets the variables (majority, prepares and accepts) associate with Paxos
     */
-  private def resetState(i: Int): Unit = {
-    majority = false
+  private def resetState(): Unit = {
+    prepareMajority = false
     prepares = 0
     accepts = 0
   }
