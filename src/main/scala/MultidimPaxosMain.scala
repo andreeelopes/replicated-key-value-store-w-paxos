@@ -5,7 +5,7 @@ import multidimensionalpaxos.learners.LearnerActor
 import multidimensionalpaxos.proposers.ProposerActor
 import utils.Node
 
-object Main extends App {
+object MultidimPaxosMain extends App {
 
   override def main(args: Array[String]) = {
 
@@ -72,7 +72,7 @@ object Main extends App {
 
 
     //Test
-    aNode.proposerActor ! Propose("a")
+    aNode.proposerActor ! Propose("a", 1)
 
   }
 }
