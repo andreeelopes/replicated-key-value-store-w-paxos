@@ -18,13 +18,13 @@ abstract class Operation {
 
 case class Init(replicas: Set[ReplicaNode], myNode: ReplicaNode)
 
-case class Get(key: String, mid: String) extends Operation
+case class GetRequest(key: String, mid: String) extends Operation
 
-case class Put(key: String, value: String, mid: String) extends Operation
+case class PutRequest(key: String, value: String, mid: String) extends Operation
 
-case class AddReplica(replica: ReplicaNode, mid: String) extends Operation
+case class AddReplicaRequest(replica: ReplicaNode, mid: String) extends Operation
 
-case class RemoveReplica(replica: ReplicaNode, mid: String) extends Operation
+case class RemoveReplicaRequest(replica: ReplicaNode, mid: String) extends Operation
 
 case class History(history: Map[Long, Event], index: Long)
 

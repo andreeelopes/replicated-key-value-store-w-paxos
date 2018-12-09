@@ -1,10 +1,11 @@
 package clients
 
+import akka.actor.ActorRef
 import replicas.statemachinereplication.{Event, Operation}
 import utils.ReplicaNode
 
 
-case class InitClient(replicas: Set[ReplicaNode], smr: Int)
+case class InitClient(replicas: Set[ReplicaNode], smr: Int, appActor: ActorRef)
 
 case class Get(key: String)
 

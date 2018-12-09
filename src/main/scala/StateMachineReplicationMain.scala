@@ -4,9 +4,8 @@ import replicas.multidimensionalpaxos.Init
 import replicas.multidimensionalpaxos.acceptors.AcceptorActor
 import replicas.multidimensionalpaxos.learners.LearnerActor
 import replicas.multidimensionalpaxos.proposers.ProposerActor
-import replicas.statemachinereplication.{Get, Put, StateMachineReplicationActor}
-import clients.{ClientActor, TriggerPut}
-import clients.test.{StartTest, TestActor, Validate}
+import replicas.statemachinereplication.{Get, Operation, Put, StateMachineReplicationActor}
+import clients.{ClientActor}
 import utils.ReplicaNode
 
 object StateMachineReplicationMain extends App {
@@ -50,7 +49,7 @@ object StateMachineReplicationMain extends App {
     val ePaxosSmr = e.actorOf(Props[StateMachineReplicationActor], "ePaxosSmr")
     val fPaxosSmr = f.actorOf(Props[StateMachineReplicationActor], "fPaxosSmr")
 
-    val aKeyValueClient = a.actorOf(Props[ClientActor], "aKeyValueClient")
+//    val aKeyValueClient = a.actorOf(Props[ClientActor, "aKeyValueClient")
 //    val bKeyValueClient = b.actorOf(Props[ClientActor], "bKeyValueClient")
 //    val cKeyValueClient = c.actorOf(Props[ClientActor], "cKeyValueClient")
 //    val dKeyValueClient = d.actorOf(Props[ClientActor], "dKeyValueClient")
@@ -103,19 +102,19 @@ object StateMachineReplicationMain extends App {
 
 
     //    aNode.smrActor ! Get("a1", "a1mid")
-    aNode.client ! TriggerPut(aNode.smrActor, "a1", "av1")
-    aNode.client ! TriggerPut(aNode.smrActor, "a2", "av2")
-    bNode.client ! TriggerPut(bNode.smrActor, "b1", "bv1")
-    cNode.client ! TriggerPut(cNode.smrActor, "c1", "cv1")
-    dNode.client ! TriggerPut(dNode.smrActor, "d1", "dv1")
-    fNode.client ! TriggerPut(fNode.smrActor, "e1", "fv1")
-    eNode.client ! TriggerPut(eNode.smrActor, "e1", "CHANGED_E1")
+    aPaxosSmr ! Put("a1", "av1", "mid1")
+    aPaxosSmr ! Put("a1", "av2", "mid2")
+    aPaxosSmr ! Put("a1", "av3", "mid3")
+//    aPaxosSmr ! Put("a4", "av4", "mid4")
+//    aPaxosSmr ! Put("a5", "av5", "mid5")
+//    aPaxosSmr ! Put("a6", "av6", "mid6")
+//    aPaxosSmr ! Put("a7", "av7", "mid7")
 
-    Thread.sleep(10000)
-
-    val testActor = a.actorOf(Props[TestActor], "testActor")
-    testActor ! StartTest(membership)
-    testActor ! Validate
+//    Thread.sleep(10000)
+//
+//    val testActor = a.actorOf(Props[TestActor], "testActor")
+//    testActor ! StartTest(membership)
+//    testActor ! Validate
 
 
   }

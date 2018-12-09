@@ -19,39 +19,37 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
 
   var replicas = List[ReplicaNode]()
   var delivered = Set[String]()
-
+  var appActor: ActorRef = _
   var myReplica: ActorRef = _
 
   var timers = Map[String, Cancellable]()
 
 
-
-
   override def receive: Receive = {
-    case r: Reply =>
-      log.info(s"CLIENT RECEIVED: ${r.toString}")
 
     case i: InitClient =>
       replicas = i.replicas.toList
+      appActor = i.appActor
       var myReplicaId = i.smr
       if (i.smr == -1) {
         myReplicaId = pickRandomSmr()
       }
       myReplica = replicas(myReplicaId).smrActor
 
-    case clients.Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
-      myReplica ! statemachinereplication.Get(key, generateMID())
+    case Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
+      myReplica ! GetRequest(key, generateMID())
 
 
-    case clients.Put(key, value) =>
+    case Put(key, value) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
       receivePut(key, value, generateMID())
 
 
-    case clients.AddReplica(node) =>
-      myReplica ! statemachinereplication.AddReplica(node, generateMID())
+    case AddReplica(node) =>
+      myReplica ! AddReplicaRequest(node, generateMID())
 
-    case clients.RemoveReplica(node) =>
-      myReplica ! statemachinereplication.RemoveReplica(node, generateMID())
+    case RemoveReplica(node) =>
+      myReplica ! RemoveReplicaRequest(node, generateMID())
 
     case ResendOp(op) =>
       if (!delivered.contains(op.mid))
@@ -64,24 +62,38 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
     case Reply(event) =>
       if (!delivered.contains(event.mid)) {
         delivered += event.mid
-        ReplyDelivery(event)
+        appActor ! ReplyDelivery(event)
+      }
+
+    case GetReply(value, mid) =>
+      if (!delivered.contains(mid)) {
+        delivered += mid
+        appActor ! GetReply(value, mid)
       }
 
     case TestGet(key, mid) =>
-      myReplica ! statemachinereplication.Get(key, mid)
+      myReplica = replicas(pickRandomSmr()).smrActor
+
+      myReplica ! GetRequest(key, mid)
 
     case TestPut(key, value, mid) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
+
       receivePut(key, value, mid)
 
     case TestAddReplica(node, mid) =>
-      myReplica ! statemachinereplication.AddReplica(node, mid)
+      myReplica = replicas(pickRandomSmr()).smrActor
+
+      myReplica ! AddReplicaRequest(node, mid)
 
     case TestRemoveReplica(node, mid) =>
-      myReplica ! statemachinereplication.RemoveReplica(node, mid)
+      myReplica = replicas(pickRandomSmr()).smrActor
+
+      myReplica ! RemoveReplicaRequest(node, mid)
   }
 
   def receivePut(key: String, value: String, mid: String) = {
-    val op = statemachinereplication.Put(key, value, mid)
+    val op = PutRequest(key, value, mid)
     myReplica ! op
     timers += (op.mid -> context.system.scheduler.scheduleOnce(
       Duration(OperationTimeout, TimeUnit.SECONDS),
@@ -94,10 +106,9 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
   }
 
   private def pickRandomSmr(): Int = {
-    val start = 0
-    val end: Int = replicas.size
+
     val rnd = new scala.util.Random
-    start + rnd.nextInt((end - start) + 1)
+    rnd.nextInt(replicas.size)
   }
 }
 
