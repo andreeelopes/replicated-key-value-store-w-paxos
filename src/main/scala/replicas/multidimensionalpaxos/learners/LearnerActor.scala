@@ -1,16 +1,16 @@
-package multidimensionalpaxos.learners
+package replicas.multidimensionalpaxos.learners
 
 import akka.actor.{Actor, ActorLogging}
-import multidimensionalpaxos.{DecisionDelivery, Init, LockedValue}
-import statemachinereplication.{Event, UpdateReplicas}
-import utils.Node
+import replicas.multidimensionalpaxos.{DecisionDelivery, Init, LockedValue}
+import replicas.statemachinereplication.{Event, UpdateReplicas}
+import utils.ReplicaNode
 
 case class LearnerInstance(var decided: Boolean = false, var i: Long)
 
 class LearnerActor extends Actor with ActorLogging {
 
-  var replicas: Set[Node] = _
-  var myNode: Node = _
+  var replicas: Set[ReplicaNode] = _
+  var myNode: ReplicaNode = _
   var learnerInstances: Map[Long, LearnerInstance] = Map()
 
 

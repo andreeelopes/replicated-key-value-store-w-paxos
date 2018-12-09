@@ -1,21 +1,101 @@
 package clients
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import statemachinereplication.{Get, Operation, Put, Reply}
+import java.util.concurrent.TimeUnit
 
-case class TriggerGet(smr: ActorRef, key: String)
+import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
+import clients.test.{TestAddReplica, TestGet, TestPut, TestRemoveReplica}
+import replicas.statemachinereplication
+import replicas.statemachinereplication._
+import utils.ReplicaNode
 
-case class TriggerPut(smr: ActorRef, key: String, value: String)
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
-class ClientActor extends Actor with ActorLogging {
+
+class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
+
+  val OperationTimeout = 1
+
+  var replicas = List[ReplicaNode]()
+  var delivered = Set[String]()
+
+  var myReplica: ActorRef = _
+
+  var timers = Map[String, Cancellable]()
+
+
+  def receivePut(key: String, value: String, mid: String) = {
+    val op = Put(key, value, mid)
+    myReplica ! op
+    timers += (op.mid -> context.system.scheduler.scheduleOnce(
+      Duration(OperationTimeout, TimeUnit.SECONDS),
+      self, ResendOp(op)))
+  }
+
   override def receive: Receive = {
     case r: Reply =>
       log.info(s"CLIENT RECEIVED: ${r.toString}")
 
-    case TriggerGet(smr, key) =>
-      smr ! Get(key, key)
+    case i: Init =>
+      replicas = i.replicas.toList
+      var myReplicaId = i.smr
+      if (i.smr == -1) {
+        myReplicaId = pickRandomSmr()
+      }
+      myReplica = replicas(myReplicaId).smrActor
 
-    case TriggerPut(smr, key, value) =>
-      smr ! Put(key, value, key)
+    case clients.Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
+      myReplica ! Get(key, generateMID())
+
+
+    case clients.Put(key, value) =>
+      receivePut(key, value, generateMID())
+
+
+    case clients.AddReplica(node) =>
+      myReplica ! statemachinereplication.AddReplica(node, generateMID())
+
+    case clients.RemoveReplica(node) =>
+      myReplica ! statemachinereplication.RemoveReplica(node, generateMID())
+
+    case ResendOp(op) =>
+      if (!delivered.contains(op.mid))
+        myReplica ! op
+      else {
+        timers(op.mid).cancel()
+        timers -= op.mid
+      }
+
+    case Reply(event) =>
+      if (!delivered.contains(event.mid)) {
+        delivered += event.mid
+        ReplyDelivery(event)
+      }
+
+    case TestGet(key, mid) =>
+      myReplica ! Get(key, mid)
+
+    case TestPut(key, value, mid) =>
+      receivePut(key, value, mid)
+
+    case TestAddReplica(node, mid) =>
+      myReplica ! statemachinereplication.AddReplica(node, mid)
+
+    case TestRemoveReplica(node, mid) =>
+      myReplica ! statemachinereplication.RemoveReplica(node, mid)
+  }
+
+
+  private def generateMID(): String = {
+    ip + port + System.nanoTime()
+  }
+
+  private def pickRandomSmr(): Int = {
+    val start = 0
+    val end: Int = replicas.size
+    val rnd = new scala.util.Random
+    start + rnd.nextInt((end - start) + 1)
   }
 }
+

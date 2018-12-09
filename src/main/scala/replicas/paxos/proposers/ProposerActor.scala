@@ -1,11 +1,11 @@
-package paxos.proposers
+package replicas.paxos.proposers
 
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
-import paxos._
-import statemachinereplication.UpdateReplicas
-import utils.{Node, SequenceNumber, Utils}
+import replicas.paxos._
+import replicas.statemachinereplication.UpdateReplicas
+import utils.{ReplicaNode, SequenceNumber, Utils}
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -16,7 +16,7 @@ class ProposerActor extends Actor with ActorLogging {
   val PrepareTimeout = 1 //secs
   val AcceptTimeout = 1 //secs
 
-  var replicas = Set[Node]()
+  var replicas = Set[ReplicaNode]()
   var snFactory: SequenceNumber = _ // sequence number of the proposed value
   var sn: Int = _
   var value = "" // value to be proposed
@@ -28,7 +28,7 @@ class ProposerActor extends Actor with ActorLogging {
   var prepareTimer: Cancellable = _
   var acceptTimer: Cancellable = _
 
-  var myNode: Node = _
+  var myNode: ReplicaNode = _
 
   var prevMajority: Boolean = false
 

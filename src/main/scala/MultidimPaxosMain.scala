@@ -1,10 +1,11 @@
+/*
 
 import akka.actor.{ActorSystem, Props}
-import multidimensionalpaxos.{Init, Propose}
-import multidimensionalpaxos.acceptors.AcceptorActor
-import multidimensionalpaxos.learners.LearnerActor
-import multidimensionalpaxos.proposers.ProposerActor
-import statemachinereplication.{Event, Get}
+import replicas.multidimensionalpaxos.{Init, Propose}
+import replicas.multidimensionalpaxos.acceptors.AcceptorActor
+import replicas.multidimensionalpaxos.learners.LearnerActor
+import replicas.multidimensionalpaxos.proposers.ProposerActor
+import replicas.statemachinereplication.{Event, Get}
 import utils.Node
 
 object MultidimPaxosMain extends App {
@@ -83,3 +84,4 @@ object MultidimPaxosMain extends App {
 
   }
 }
+*/

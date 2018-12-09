@@ -1,9 +1,9 @@
-package multidimensionalpaxos
+package replicas.multidimensionalpaxos
 
-import statemachinereplication.{Event}
-import utils.Node
+import replicas.statemachinereplication.{Event}
+import utils.ReplicaNode
 
-case class Init(membership: Set[Node], myNode: Node)
+case class Init(membership: Set[ReplicaNode], myNode: ReplicaNode)
 
 case class Propose(value: Event, instance: Long)
 

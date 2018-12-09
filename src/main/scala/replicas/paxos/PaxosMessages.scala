@@ -1,8 +1,8 @@
-package paxos
+package replicas.paxos
 
-import utils.Node
+import utils.ReplicaNode
 
-case class Init(membership: Set[Node], myNode: Node)
+case class Init(membership: Set[ReplicaNode], myNode: ReplicaNode)
 
 case class Propose(value: String)
 

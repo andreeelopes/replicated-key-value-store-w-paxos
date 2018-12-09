@@ -1,9 +1,9 @@
-package paxos.acceptors
+package replicas.paxos.acceptors
 
 import akka.actor.{Actor, ActorLogging}
-import paxos._
-import statemachinereplication.UpdateReplicas
-import utils.Node
+import replicas.paxos._
+import replicas.statemachinereplication.UpdateReplicas
+import utils.ReplicaNode
 
 class AcceptorActor extends Actor with ActorLogging {
 
@@ -11,8 +11,8 @@ class AcceptorActor extends Actor with ActorLogging {
   var na = -1
   var va = "-1"
 
-  var replicas = Set[Node]()
-  var myNode: Node = _
+  var replicas = Set[ReplicaNode]()
+  var myNode: ReplicaNode = _
 
   override def receive = {
 

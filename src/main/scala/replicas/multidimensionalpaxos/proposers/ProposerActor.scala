@@ -1,11 +1,11 @@
-package multidimensionalpaxos.proposers
+package replicas.multidimensionalpaxos.proposers
 
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
-import multidimensionalpaxos._
-import statemachinereplication.{Event, UpdateReplicas}
-import utils.{Node, SequenceNumber, Utils}
+import replicas.multidimensionalpaxos._
+import replicas.statemachinereplication.{Event, UpdateReplicas}
+import utils.{ReplicaNode, SequenceNumber, Utils}
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -37,10 +37,10 @@ class ProposerActor extends Actor with ActorLogging {
   val PrepareTimeout = 1 //secs
   val AcceptTimeout = 1 //secs
 
-  var replicas = Set[Node]()
+  var replicas = Set[ReplicaNode]()
   var snFactory: SequenceNumber = _ // sequence number of the proposed value
 
-  var myNode: Node = _
+  var myNode: ReplicaNode = _
 
   override def receive = {
     case Init(_replicas_, _myNode_) =>

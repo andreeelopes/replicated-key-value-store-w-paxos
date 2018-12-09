@@ -1,9 +1,9 @@
-package multidimensionalpaxos.acceptors
+package replicas.multidimensionalpaxos.acceptors
 
 import akka.actor.{Actor, ActorLogging}
-import multidimensionalpaxos._
-import statemachinereplication.{Event, UpdateReplicas}
-import utils.Node
+import replicas.multidimensionalpaxos._
+import replicas.statemachinereplication.{Event, UpdateReplicas}
+import utils.ReplicaNode
 
 /**
   * @param np highest prepare
@@ -17,8 +17,8 @@ case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: Event = 
 class AcceptorActor extends Actor with ActorLogging {
 
   var acceptorInstances = Map[Long, AcceptorInstance]()
-  var replicas = Set[Node]()
-  var myNode: Node = _
+  var replicas = Set[ReplicaNode]()
+  var myNode: ReplicaNode = _
 
 
   override def receive = {

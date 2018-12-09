@@ -1,8 +1,9 @@
+/*
 import akka.actor.{ActorSystem, PoisonPill, Props}
-import paxos.{Init, Propose}
-import paxos.acceptors.AcceptorActor
-import paxos.learners.LearnerActor
-import paxos.proposers.ProposerActor
+import replicas.paxos.{Init, Propose}
+import replicas.paxos.acceptors.AcceptorActor
+import replicas.paxos.learners.LearnerActor
+import replicas.paxos.proposers.ProposerActor
 import utils.Node
 
 object PaxosMain extends App {
@@ -76,3 +77,4 @@ object PaxosMain extends App {
 
   }
 }
+*/

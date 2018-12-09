@@ -1,8 +1,9 @@
-package statemachinereplication
+package replicas.statemachinereplication
 
 import akka.actor.{Actor, ActorLogging}
-import multidimensionalpaxos.{DecisionDelivery, Propose}
-import utils.Node
+import replicas.multidimensionalpaxos.{DecisionDelivery, Propose}
+import clients.test.{State, StateDelivery}
+import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
 
@@ -17,13 +18,13 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   var proposed = Set[String]()
   var historyProcessed = false
 
-  var replicas = Set[Node]()
+  var replicas = Set[ReplicaNode]()
 
-  var myNode: Node = _
+  var myNode: ReplicaNode = _
 
 
   override def receive: Receive = {
-    case i: statemachinereplication.Init =>
+    case i: replicas.statemachinereplication.Init =>
       log.info(s"Init=$i")
       replicas = i.replicas
       myNode = i.myNode
@@ -66,18 +67,15 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
     }
     else {
-      //TODO faz reply mesmo a cenas na history que não foram deles?
-      // TODO não se tem que pôr no proposed? sempre que se recebe um decide.
       val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
       if (eventOpt.isDefined) {
-
         sender ! Reply(eventOpt.get)
-
       }
     }
   }
 
   def receiveDecision(op: Event, i: Long): Unit = {
+    //    if(!executed.contains(op.mid)) { TODO - evitar executar duas vezes
     history += (i -> op)
 
     if (toBeProposed.nonEmpty && toBeProposed.head.equals(op))
@@ -92,8 +90,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
     if (previousCompleted(i))
       executeOp(op, i)
-
-
+    //    } TODO - evitar executar duas vezes
   }
 
 
@@ -116,7 +113,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
 
       case RemoveReplica(replica, _) =>
-        oldValue = index.toString //TODO
+        oldValue = index.toString
         replicas -= replica
         updatePaxosReplicas()
 
@@ -124,8 +121,6 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
     history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
-    //TODO e se a replica que fez a op morrer entretanto?
-    // TODO Como está vai receber de todos os que não morreram, mas pode filtrar os mids
     if (event.replica.equals(myNode) || !replicas.contains(event.replica)) {
       event.sender ! Reply(event)
       log.info(Reply(event).toString)

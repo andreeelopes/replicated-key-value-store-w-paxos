@@ -1,14 +1,14 @@
-package paxos.learners
+package replicas.paxos.learners
 
 import akka.actor.{Actor, ActorLogging}
-import paxos.{Init, LockedValue}
-import statemachinereplication.UpdateReplicas
-import utils.Node
+import replicas.paxos.{Init, LockedValue}
+import replicas.statemachinereplication.UpdateReplicas
+import utils.ReplicaNode
 
 class LearnerActor extends Actor with ActorLogging {
 
-  var replicas: Set[Node] = _
-  var myNode: Node = _
+  var replicas: Set[ReplicaNode] = _
+  var myNode: ReplicaNode = _
   var decided: Boolean = false
 
   override def receive = {
