@@ -5,7 +5,8 @@ import akka.actor.ActorRef
 case class Node(name: String, nodeID: String, client: ActorRef, smrActor: ActorRef, acceptorActor: ActorRef,
                 learnerActor: ActorRef, proposerActor: ActorRef) {
   override def toString = name
-  def getNodeID : String = nodeID
+
+  def getNodeID: String = nodeID
 
 
 }

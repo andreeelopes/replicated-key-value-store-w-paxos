@@ -27,11 +27,16 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
       log.info(s"Init=$i")
       replicas = i.replicas
       myNode = i.myNode
-    case get@Get(key, mid) =>
-      log.info(get.toString)
+
+    //Testing
+    case State =>
+      sender ! StateDelivery(history, store, toBeProposed, replicas)
+
+    case Get(key, mid) =>
+      log.info(Get(key, mid).toString)
       receiveGet(key, mid)
 
-    case op: Operation => //TODO testar esta notação e experimetnar
+    case op: Operation =>
       log.info(op.toString)
       receiveUpdateOp(op)
 
@@ -62,6 +67,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     }
     else {
       //TODO faz reply mesmo a cenas na history que não foram deles?
+      // TODO não se tem que pôr no proposed? sempre que se recebe um decide.
       val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
       if (eventOpt.isDefined) {
 
@@ -71,7 +77,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     }
   }
 
-  def receiveDecision(op: Event, i: Long): Unit = { //TODO podera decidir duas vezes?
+  def receiveDecision(op: Event, i: Long): Unit = {
     history += (i -> op)
 
     if (toBeProposed.nonEmpty && toBeProposed.head.equals(op))
@@ -84,8 +90,10 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
       log.info(Propose(toBeProposed.head, current).toString)
     }
 
-    if (previousCompleted(i)) {}
-    //      executeOp(op, i)//TODO not necessary
+    if (previousCompleted(i))
+      executeOp(op, i)
+
+
   }
 
 
@@ -164,11 +172,11 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
   /**
     *
-    * @param index
+    * @param index event index in history
     * @return
     */
   private def previousCompleted(index: Long): Boolean = {
-    for (i <- 0 to index.toInt) {
+    for (i <- 0 until index.toInt) {
       if (history.get(i).isEmpty)
         return false
       if (!history(i).executed)
@@ -180,7 +188,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   private def findValidIndex(): Long = {
     val maxKey = history.keys.max
     for (i <- 0 to maxKey.toInt) {
-      //TODO
+
       if (history.get(i).isEmpty)
         return i
     }
@@ -188,3 +196,4 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   }
 
 }
+

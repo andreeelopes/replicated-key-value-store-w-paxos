@@ -3,6 +3,8 @@ package statemachinereplication
 import akka.actor.ActorRef
 import utils.Node
 
+import scala.collection.immutable.Queue
+
 case class UpdateReplicas(replicas: Set[Node])
 
 case class Event(op: Operation, mid: String, sender: ActorRef, replica: Node,
@@ -29,3 +31,8 @@ case class History(history: Map[Long, Event], index: Long)
 case class Reply(event: Event)
 
 case class GetReply(value: String, mid: String)
+
+object State
+
+case class StateDelivery(history: Map[Long, Event], store: Map[String, String],
+                         toBeProposed: Queue[Event], replicas: Set[Node])

@@ -1,4 +1,4 @@
-package testapp
+package clients
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import statemachinereplication.{Get, Operation, Put, Reply}
