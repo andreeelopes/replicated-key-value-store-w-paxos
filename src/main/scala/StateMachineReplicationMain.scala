@@ -99,7 +99,12 @@ object StateMachineReplicationMain extends App {
 
 
     //    aNode.smrActor ! Get("a1", "a1mid")
-    aNode.testAppActor ! TriggerPut(aNode.smrActor, "a1", "v1")
+    aNode.client ! TriggerPut(aNode.smrActor, "a1", "av1")
+    bNode.client ! TriggerPut(bNode.smrActor, "b1", "bv1")
+    cNode.client ! TriggerPut(cNode.smrActor, "c1", "cv1")
+    dNode.client ! TriggerPut(dNode.smrActor, "d1", "dv1")
+    eNode.client ! TriggerPut(eNode.smrActor, "e1", "CARALHO")
+    fNode.client ! TriggerPut(fNode.smrActor, "e1", "fv1")
 
 
   }

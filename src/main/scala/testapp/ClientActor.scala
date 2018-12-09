@@ -4,11 +4,13 @@ import akka.actor.{Actor, ActorLogging, ActorRef}
 import statemachinereplication.{Get, Operation, Put, Reply}
 
 case class TriggerGet(smr: ActorRef, key: String)
+
 case class TriggerPut(smr: ActorRef, key: String, value: String)
 
-class ClientActor extends Actor with ActorLogging{
+class ClientActor extends Actor with ActorLogging {
   override def receive: Receive = {
     case r: Reply =>
+      log.info(s"CLIENT RECEIVED: ${r.toString}")
 
     case TriggerGet(smr, key) =>
       smr ! Get(key, key)

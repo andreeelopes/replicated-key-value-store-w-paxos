@@ -46,22 +46,22 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
 
   def receiveGet(key: String, mid: String): Unit = {
-    log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=$sender")
+    log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
 
-    myNode.testAppActor ! GetReply(store.getOrElse(key, NotDefined), mid)
+    myNode.client ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
 
   def receiveUpdateOp(op: Operation): Unit = {
     if (!proposed.contains(op.mid)) {
       proposed += op.mid
-      toBeProposed = toBeProposed.enqueue(Event(op, op.mid, sender))
+      toBeProposed = toBeProposed.enqueue(Event(op, op.mid, sender, myNode))
 
-      if (current == 0) {
-        log.info(s"myNode.proposer=${myNode.proposerActor}")
+      if (current == 0)
         myNode.proposerActor ! Propose(toBeProposed.head, current)
-      }
+
     }
     else {
+      //TODO faz reply mesmo a cenas na history que não foram deles?
       val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
       if (eventOpt.isDefined) {
 
@@ -77,14 +77,15 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     if (toBeProposed.nonEmpty && toBeProposed.head.equals(op))
       toBeProposed = toBeProposed.dequeue._2
 
+
     if (toBeProposed.nonEmpty) {
       current = findValidIndex()
       myNode.proposerActor ! Propose(toBeProposed.head, current)
       log.info(Propose(toBeProposed.head, current).toString)
     }
 
-    if (previousCompleted(i))
-      executeOp(op, i)
+    if (previousCompleted(i)) {}
+    //      executeOp(op, i)//TODO not necessary
   }
 
 
@@ -114,8 +115,17 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     }
 
     history += (index -> history(index).copy(executed = true, returnValue = oldValue))
-    event.sender ! Reply(event)
-    log.info(s"${Reply(event).toString} to: ${event.sender}")
+
+    //TODO e se a replica que fez a op morrer entretanto?
+    // TODO Como está vai receber de todos os que não morreram, mas pode filtrar os mids
+    if (event.replica.equals(myNode) || !replicas.contains(event.replica)) {
+      event.sender ! Reply(event)
+      log.info(Reply(event).toString)
+    }
+
+    log.info(s"STORE: ${store.toString()}")
+    log.info(s"HISTORY: ${history.toString()}")
+
   }
 
   private def updatePaxosReplicas(): Unit = {
