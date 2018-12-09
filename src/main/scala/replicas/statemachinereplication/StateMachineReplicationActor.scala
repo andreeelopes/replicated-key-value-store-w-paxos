@@ -18,7 +18,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   var proposed = Set[String]()
   var historyProcessed = false
 
-  var replicas = Set[ReplicaNode]()
+  var myReplicas = Set[ReplicaNode]()
 
   var myNode: ReplicaNode = _
 
@@ -26,12 +26,12 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   override def receive: Receive = {
     case i: replicas.statemachinereplication.Init =>
       log.info(s"Init=$i")
-      replicas = i.replicas
+      myReplicas = i.replicas
       myNode = i.myNode
 
     //Testing
     case State =>
-      sender ! StateDelivery(history, store, toBeProposed, replicas)
+      sender ! StateDelivery(history, store, toBeProposed, myReplicas)
 
     case Get(key, mid) =>
       log.info(Get(key, mid).toString)
@@ -54,7 +54,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   def receiveGet(key: String, mid: String): Unit = {
     log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
 
-    myNode.client ! GetReply(store.getOrElse(key, NotDefined), mid)
+    sender ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
 
   def receiveUpdateOp(op: Operation): Unit = {
@@ -106,7 +106,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
       case AddReplica(replica, _) =>
         oldValue = index.toString
-        replicas += replica
+        myReplicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
         log.info(s"${History(history, index).toString} to: $replica")
@@ -114,14 +114,14 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
       case RemoveReplica(replica, _) =>
         oldValue = index.toString
-        replicas -= replica
+        myReplicas -= replica
         updatePaxosReplicas()
 
     }
 
     history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
-    if (event.replica.equals(myNode) || !replicas.contains(event.replica)) {
+    if (event.replica.equals(myNode) || !myReplicas.contains(event.replica)) {
       event.sender ! Reply(event)
       log.info(Reply(event).toString)
     }
@@ -132,9 +132,9 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   }
 
   private def updatePaxosReplicas(): Unit = {
-    myNode.acceptorActor ! UpdateReplicas(replicas)
-    myNode.learnerActor ! UpdateReplicas(replicas)
-    myNode.proposerActor ! UpdateReplicas(replicas)
+    myNode.acceptorActor ! UpdateReplicas(myReplicas)
+    myNode.learnerActor ! UpdateReplicas(myReplicas)
+    myNode.proposerActor ! UpdateReplicas(myReplicas)
   }
 
   private def executeHistory(_history_ : Map[Long, Event], index: Long): Unit = {
@@ -152,12 +152,12 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
           case AddReplica(replica, _) =>
             oldValue = index.toString
-            replicas += replica
+            myReplicas += replica
             updatePaxosReplicas()
 
           case RemoveReplica(replica, _) =>
             oldValue = index.toString
-            replicas -= replica
+            myReplicas -= replica
             updatePaxosReplicas()
         }
         history += (index -> history(index).copy(executed = true, returnValue = oldValue))

@@ -1,12 +1,14 @@
 package clients.test
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, ActorRef}
+import clients.Put
 import utils.ReplicaNode
 
 class TestActor extends Actor with ActorLogging {
 
   var replicas: Set[ReplicaNode] = _
   var states = List[StateDelivery]()
+  var clientActor: ActorRef =_
 
   var througput: Double = 0.0
   var latency: Double = 0.0
@@ -14,9 +16,9 @@ class TestActor extends Actor with ActorLogging {
 
   override def receive = {
 
-    case StartTest(_replicas_, clientActor) =>
+    case StartTest(_replicas_, _clientActor_) =>
       replicas = _replicas_
-
+      clientActor = _clientActor_
       receiveStartTest()
 
     case Validate =>
@@ -59,6 +61,7 @@ class TestActor extends Actor with ActorLogging {
   }
 
   def receiveStartTest(): Unit = {
+    clientActor ! Put("a_key1", "a_value1")
 
   }
 

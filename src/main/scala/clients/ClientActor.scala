@@ -25,19 +25,13 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
   var timers = Map[String, Cancellable]()
 
 
-  def receivePut(key: String, value: String, mid: String) = {
-    val op = Put(key, value, mid)
-    myReplica ! op
-    timers += (op.mid -> context.system.scheduler.scheduleOnce(
-      Duration(OperationTimeout, TimeUnit.SECONDS),
-      self, ResendOp(op)))
-  }
+
 
   override def receive: Receive = {
     case r: Reply =>
       log.info(s"CLIENT RECEIVED: ${r.toString}")
 
-    case i: Init =>
+    case i: InitClient =>
       replicas = i.replicas.toList
       var myReplicaId = i.smr
       if (i.smr == -1) {
@@ -46,7 +40,7 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
       myReplica = replicas(myReplicaId).smrActor
 
     case clients.Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
-      myReplica ! Get(key, generateMID())
+      myReplica ! statemachinereplication.Get(key, generateMID())
 
 
     case clients.Put(key, value) =>
@@ -74,7 +68,7 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
       }
 
     case TestGet(key, mid) =>
-      myReplica ! Get(key, mid)
+      myReplica ! statemachinereplication.Get(key, mid)
 
     case TestPut(key, value, mid) =>
       receivePut(key, value, mid)
@@ -84,6 +78,14 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
 
     case TestRemoveReplica(node, mid) =>
       myReplica ! statemachinereplication.RemoveReplica(node, mid)
+  }
+
+  def receivePut(key: String, value: String, mid: String) = {
+    val op = statemachinereplication.Put(key, value, mid)
+    myReplica ! op
+    timers += (op.mid -> context.system.scheduler.scheduleOnce(
+      Duration(OperationTimeout, TimeUnit.SECONDS),
+      self, ResendOp(op)))
   }
 
 

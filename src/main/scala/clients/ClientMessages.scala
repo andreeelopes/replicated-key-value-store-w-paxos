@@ -4,7 +4,7 @@ import replicas.statemachinereplication.{Event, Operation}
 import utils.ReplicaNode
 
 
-case class Init(replicas: Set[ReplicaNode], smr: Int)
+case class InitClient(replicas: Set[ReplicaNode], smr: Int)
 
 case class Get(key: String)
 

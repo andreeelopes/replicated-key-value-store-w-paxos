@@ -1,6 +1,6 @@
 import akka.actor.{ActorSystem, Props}
-import clients.ClientActor
-import clients.test.{StartTest, TestActor}
+import clients.{ClientActor, InitClient, Put}
+import clients.test.{StartTest, TestActor, Validate}
 import replicas.multidimensionalpaxos.Init
 import replicas.multidimensionalpaxos.acceptors.AcceptorActor
 import replicas.multidimensionalpaxos.learners.LearnerActor
@@ -50,7 +50,7 @@ object TestClientMain extends App {
     val ePaxosSmr = e.actorOf(Props[StateMachineReplicationActor], "ePaxosSmr")
     val fPaxosSmr = f.actorOf(Props[StateMachineReplicationActor], "fPaxosSmr")
 
-    val aKeyValueClient = a.actorOf(Props[ClientActor], "aKeyValueClient")
+    val aKeyValueClient = a.actorOf(Props(new ClientActor("localhost", 69)), "aKeyValueClient")
     //    val bKeyValueClient = b.actorOf(Props[ClientActor], "bKeyValueClient")
     //    val cKeyValueClient = c.actorOf(Props[ClientActor], "cKeyValueClient")
     //    val dKeyValueClient = d.actorOf(Props[ClientActor], "dKeyValueClient")
@@ -103,18 +103,18 @@ object TestClientMain extends App {
 
 
     //    aNode.smrActor ! Get("a1", "a1mid")
-    aNode.client ! TriggerPut(aNode.smrActor, "a1", "av1")
-    aNode.client ! TriggerPut(aNode.smrActor, "a2", "av2")
-    bNode.client ! TriggerPut(bNode.smrActor, "b1", "bv1")
-    cNode.client ! TriggerPut(cNode.smrActor, "c1", "cv1")
-    dNode.client ! TriggerPut(dNode.smrActor, "d1", "dv1")
-    fNode.client ! TriggerPut(fNode.smrActor, "e1", "fv1")
-    eNode.client ! TriggerPut(eNode.smrActor, "e1", "CHANGED_E1")
+//    aNode.client ! TriggerPut(aNode.smrActor, "a2", "av2")
+//    bNode.client ! TriggerPut(bNode.smrActor, "b1", "bv1")
+//    cNode.client ! TriggerPut(cNode.smrActor, "c1", "cv1")
+//    dNode.client ! TriggerPut(dNode.smrActor, "d1", "dv1")
+//    fNode.client ! TriggerPut(fNode.smrActor, "e1", "fv1")
+//    eNode.client ! TriggerPut(eNode.smrActor, "e1", "CHANGED_E1")
 
-    Thread.sleep(10000)
+    aKeyValueClient ! InitClient(membership, 0)
 
     val testActor = a.actorOf(Props[TestActor], "testActor")
-    testActor ! StartTest(membership)
+    testActor ! StartTest(membership, aKeyValueClient)
+    Thread.sleep(5000)
     testActor ! Validate
 
   }
