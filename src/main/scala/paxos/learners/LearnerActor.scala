@@ -1,9 +1,9 @@
 package paxos.learners
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import paxos.{AcceptOk, DecisionDelivery, Init, LockedValue}
-import statemachinereplication.updateReplicas
-import utils.{Node, Utils}
+import akka.actor.{Actor, ActorLogging}
+import paxos.{Init, LockedValue}
+import statemachinereplication.UpdateReplicas
+import utils.Node
 
 class LearnerActor extends Actor with ActorLogging {
 
@@ -16,7 +16,7 @@ class LearnerActor extends Actor with ActorLogging {
     case Init(_replicas_, _myNode_) =>
       replicas = _replicas_
       myNode = _myNode_
-    case updateReplicas(_replicas_) =>
+    case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
 
     case LockedValue(value) =>

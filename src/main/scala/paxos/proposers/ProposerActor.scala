@@ -2,14 +2,14 @@ package paxos.proposers
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
+import akka.actor.{Actor, ActorLogging, Cancellable}
 import paxos._
-import statemachinereplication.updateReplicas
+import statemachinereplication.UpdateReplicas
 import utils.{Node, SequenceNumber, Utils}
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.{Duration}
 
 class ProposerActor extends Actor with ActorLogging {
   //state
@@ -63,7 +63,7 @@ class ProposerActor extends Actor with ActorLogging {
       log.info(s"[${System.nanoTime()}]  Accept timer fired | " +
         s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
-    case updateReplicas(_replicas_) =>
+    case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
       log.info(s"[${System.nanoTime()}]  Receive(UPDATE_REPLICAS, $replicas) | " +
         s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")

@@ -2,7 +2,7 @@ package multidimensionalpaxos.learners
 
 import akka.actor.{Actor, ActorLogging}
 import multidimensionalpaxos.{Init, LockedValue}
-import statemachinereplication.{Event, Operation, updateReplicas}
+import statemachinereplication.{Event, UpdateReplicas}
 import utils.Node
 
 case class LearnerInstance(var decided: Boolean = false, var i: Long)
@@ -19,7 +19,7 @@ class LearnerActor extends Actor with ActorLogging {
     case Init(_replicas_, _myNode_) =>
       replicas = _replicas_
       myNode = _myNode_
-    case updateReplicas(_replicas_) =>
+    case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
 
     case LockedValue(value, i) =>

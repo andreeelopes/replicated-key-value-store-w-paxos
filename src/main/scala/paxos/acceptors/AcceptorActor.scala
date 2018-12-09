@@ -1,8 +1,8 @@
 package paxos.acceptors
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging}
 import paxos._
-import statemachinereplication.updateReplicas
+import statemachinereplication.UpdateReplicas
 import utils.Node
 
 class AcceptorActor extends Actor with ActorLogging {
@@ -20,7 +20,7 @@ class AcceptorActor extends Actor with ActorLogging {
       replicas = _replicas_
       myNode = _myNode_
 
-    case updateReplicas(_replicas_) =>
+    case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
 
     case Prepare(n) =>

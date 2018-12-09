@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, Cancellable}
 import multidimensionalpaxos._
-import statemachinereplication.{Event, updateReplicas}
+import statemachinereplication.{Event, UpdateReplicas}
 import utils.{Node, SequenceNumber, Utils}
 
 import scala.concurrent._
@@ -70,7 +70,7 @@ class ProposerActor extends Actor with ActorLogging {
       val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
       proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
-    case updateReplicas(_replicas_) =>
+    case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
 
   }

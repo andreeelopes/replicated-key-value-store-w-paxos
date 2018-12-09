@@ -27,6 +27,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
       replicas = i.replicas
       myNode = i.myNode
     case Get(key, mid) =>
+      log.info("GET")
       receiveGet(key, mid)
 
     case op: Operation => //TODO testar esta notação e experimetnar
@@ -41,6 +42,8 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
 
   def receiveGet(key: String, mid: String): Unit = {
+    log.info(store.getOrElse(key, NotDefined))
+
     sender ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
 
@@ -80,7 +83,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
   //Procedures
 
   private def executeOp(event: Event, index: Long) = {
-    var oldValue = _
+    var oldValue: String = null
     event.op match {
       case Put(key, value, _) =>
         oldValue = store.getOrElse(key, NotDefined)
@@ -88,13 +91,13 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
         history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
       case AddReplica(replica, _) =>
-        oldValue = index
+        oldValue = index.toString
         replicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
 
       case RemoveReplica(replica, _) =>
-        oldValue = index
+        oldValue = index.toString //TODO
         replicas -= replica
         updatePaxosReplicas()
 
@@ -116,7 +119,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
       historyProcessed = true
       _history_.foreach { p =>
         val event = p._2
-        var oldValue = _
+        var oldValue: String = null
         event.op match {
           case Put(key, value, _) =>
             oldValue = store.getOrElse(key, NotDefined)
@@ -124,12 +127,12 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
             history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
           case AddReplica(replica, _) =>
-            oldValue = index
+            oldValue = index.toString
             replicas += replica
             updatePaxosReplicas()
 
           case RemoveReplica(replica, _) =>
-            oldValue = index
+            oldValue = index.toString
             replicas -= replica
             updatePaxosReplicas()
         }
@@ -144,7 +147,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     * @return
     */
   private def previousCompleted(index: Long): Boolean = {
-    for (i <- 0 to index) {
+    for (i <- 0 to index.toInt) {
       if (history.get(i).isEmpty)
         return false
       if (!history(i).executed)
@@ -155,7 +158,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
   private def findValidIndex(): Long = {
     val maxKey = history.keys.max
-    for (i <- 0 to maxKey) {
+    for (i <- 0 to maxKey.toInt) {//TODO
       if (history.get(i).isEmpty)
         return i
     }

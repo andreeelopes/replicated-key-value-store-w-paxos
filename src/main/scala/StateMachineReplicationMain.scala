@@ -3,6 +3,7 @@ import paxos.Init
 import paxos.acceptors.AcceptorActor
 import paxos.learners.LearnerActor
 import paxos.proposers.ProposerActor
+import statemachinereplication.Get
 import utils.Node
 
 object StateMachineReplicationMain extends App {
@@ -50,26 +51,28 @@ object StateMachineReplicationMain extends App {
     aPaxosAcceptor ! Init(membership, aNode)
     aPaxosLearner ! Init(membership, aNode)
 
-    bPaxosProposer ! Init(membership, bNode)
-    bPaxosAcceptor ! Init(membership, bNode)
-    bPaxosLearner ! Init(membership, bNode)
+//    bPaxosProposer ! Init(membership, bNode)
+//    bPaxosAcceptor ! Init(membership, bNode)
+//    bPaxosLearner ! Init(membership, bNode)
+//
+//    cPaxosProposer ! Init(membership, cNode)
+//    cPaxosAcceptor ! Init(membership, cNode)
+//    cPaxosLearner ! Init(membership, cNode)
+//
+//    dPaxosProposer ! Init(membership, dNode)
+//    dPaxosAcceptor ! Init(membership, dNode)
+//    dPaxosLearner ! Init(membership, dNode)
+//
+//    ePaxosProposer ! Init(membership, eNode)
+//    ePaxosAcceptor ! Init(membership, eNode)
+//    ePaxosLearner ! Init(membership, eNode)
+//
+//    fPaxosProposer ! Init(membership, fNode)
+//    fPaxosAcceptor ! Init(membership, fNode)
+//    fPaxosLearner ! Init(membership, fNode)
 
-    cPaxosProposer ! Init(membership, cNode)
-    cPaxosAcceptor ! Init(membership, cNode)
-    cPaxosLearner ! Init(membership, cNode)
 
-    dPaxosProposer ! Init(membership, dNode)
-    dPaxosAcceptor ! Init(membership, dNode)
-    dPaxosLearner ! Init(membership, dNode)
-
-    ePaxosProposer ! Init(membership, eNode)
-    ePaxosAcceptor ! Init(membership, eNode)
-    ePaxosLearner ! Init(membership, eNode)
-
-    fPaxosProposer ! Init(membership, fNode)
-    fPaxosAcceptor ! Init(membership, fNode)
-    fPaxosLearner ! Init(membership, fNode)
-
+    aNode.smrActor ! Get("a1", "a1mid")
 
   }
 
