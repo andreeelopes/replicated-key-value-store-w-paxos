@@ -1,15 +1,15 @@
-/*
 import akka.actor.{ActorSystem, Props}
+import clients.ClientActor
+import clients.test.{StartTest, TestActor}
 import replicas.multidimensionalpaxos.Init
 import replicas.multidimensionalpaxos.acceptors.AcceptorActor
 import replicas.multidimensionalpaxos.learners.LearnerActor
 import replicas.multidimensionalpaxos.proposers.ProposerActor
-import replicas.statemachinereplication.{Get, Put, StateMachineReplicationActor}
-import clients.{ClientActor, TriggerPut}
-import clients.test.{StartTest, TestActor, Validate}
+import replicas.statemachinereplication.StateMachineReplicationActor
 import utils.ReplicaNode
 
-object StateMachineReplicationMain extends App {
+object TestClientMain extends App {
+
 
   override def main(args: Array[String]) = {
 
@@ -51,11 +51,11 @@ object StateMachineReplicationMain extends App {
     val fPaxosSmr = f.actorOf(Props[StateMachineReplicationActor], "fPaxosSmr")
 
     val aKeyValueClient = a.actorOf(Props[ClientActor], "aKeyValueClient")
-//    val bKeyValueClient = b.actorOf(Props[ClientActor], "bKeyValueClient")
-//    val cKeyValueClient = c.actorOf(Props[ClientActor], "cKeyValueClient")
-//    val dKeyValueClient = d.actorOf(Props[ClientActor], "dKeyValueClient")
-//    val eKeyValueClient = e.actorOf(Props[ClientActor], "eKeyValueClient")
-//    val fKeyValueClient = f.actorOf(Props[ClientActor], "fKeyValueClient")
+    //    val bKeyValueClient = b.actorOf(Props[ClientActor], "bKeyValueClient")
+    //    val cKeyValueClient = c.actorOf(Props[ClientActor], "cKeyValueClient")
+    //    val dKeyValueClient = d.actorOf(Props[ClientActor], "dKeyValueClient")
+    //    val eKeyValueClient = e.actorOf(Props[ClientActor], "eKeyValueClient")
+    //    val fKeyValueClient = f.actorOf(Props[ClientActor], "fKeyValueClient")
 
 
     val aNode = ReplicaNode("aNode", "1", aPaxosSmr, aPaxosAcceptor, aPaxosLearner, aPaxosProposer)
@@ -117,8 +117,7 @@ object StateMachineReplicationMain extends App {
     testActor ! StartTest(membership)
     testActor ! Validate
 
-
   }
 
+
 }
-*/
