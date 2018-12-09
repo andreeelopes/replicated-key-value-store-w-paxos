@@ -1,7 +1,7 @@
 package multidimensionalpaxos.learners
 
 import akka.actor.{Actor, ActorLogging}
-import multidimensionalpaxos.{Init, LockedValue}
+import multidimensionalpaxos.{DecisionDelivery, Init, LockedValue}
 import statemachinereplication.{Event, UpdateReplicas}
 import utils.Node
 
@@ -23,7 +23,7 @@ class LearnerActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case LockedValue(value, i) =>
-      log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
+      //log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
       learnerInstances += (i -> receiveLockedValue(learnerInstances.getOrElse(i, LearnerInstance(i = i)), value))
 
   }
@@ -32,8 +32,8 @@ class LearnerActor extends Actor with ActorLogging {
     if (!iLearner.decided) {
       iLearner.decided = true
 
-      log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=${iLearner.i})")
-      //myNode.smrActor ! DecisionDelivery(value, iLearner.i)
+      //log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=${iLearner.i})")
+      myNode.smrActor ! DecisionDelivery(value, iLearner.i)
     }
 
     iLearner

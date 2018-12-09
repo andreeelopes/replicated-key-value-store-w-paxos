@@ -1,6 +1,5 @@
-import java.rmi.server.Operation
 
-import akka.actor.{ActorSystem, PoisonPill, Props}
+import akka.actor.{ActorSystem, Props}
 import multidimensionalpaxos.{Init, Propose}
 import multidimensionalpaxos.acceptors.AcceptorActor
 import multidimensionalpaxos.learners.LearnerActor

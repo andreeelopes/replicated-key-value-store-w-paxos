@@ -1,9 +1,10 @@
 import akka.actor.{ActorSystem, Props}
-import paxos.Init
-import paxos.acceptors.AcceptorActor
-import paxos.learners.LearnerActor
-import paxos.proposers.ProposerActor
-import statemachinereplication.{Get, StateMachineReplicationActor}
+import multidimensionalpaxos.Init
+import multidimensionalpaxos.acceptors.AcceptorActor
+import multidimensionalpaxos.learners.LearnerActor
+import multidimensionalpaxos.proposers.ProposerActor
+import statemachinereplication.{Get, Put, StateMachineReplicationActor}
+import testapp.{ClientActor, TriggerPut}
 import utils.Node
 
 object StateMachineReplicationMain extends App {
@@ -45,20 +46,36 @@ object StateMachineReplicationMain extends App {
     val ePaxosSmr = e.actorOf(Props[StateMachineReplicationActor], "ePaxosSmr")
     val fPaxosSmr = f.actorOf(Props[StateMachineReplicationActor], "fPaxosSmr")
 
+    val aKeyValueClient = a.actorOf(Props[ClientActor], "aKeyValueClient")
+    val bKeyValueClient = b.actorOf(Props[ClientActor], "bKeyValueClient")
+    val cKeyValueClient = c.actorOf(Props[ClientActor], "cKeyValueClient")
+    val dKeyValueClient = d.actorOf(Props[ClientActor], "dKeyValueClient")
+    val eKeyValueClient = e.actorOf(Props[ClientActor], "eKeyValueClient")
+    val fKeyValueClient = f.actorOf(Props[ClientActor], "fKeyValueClient")
 
-    val aNode = Node("aNode", "1", null, aPaxosSmr, aPaxosAcceptor, aPaxosLearner, aPaxosProposer)
-    val bNode = Node("bNode", "2", null, bPaxosSmr, bPaxosAcceptor, bPaxosLearner, bPaxosProposer)
-    val cNode = Node("cNode", "3", null, cPaxosSmr, cPaxosAcceptor, cPaxosLearner, cPaxosProposer)
-    val dNode = Node("dNode", "4", null, dPaxosSmr, dPaxosAcceptor, dPaxosLearner, dPaxosProposer)
-    val eNode = Node("eNode", "5", null, ePaxosSmr, ePaxosAcceptor, ePaxosLearner, ePaxosProposer)
-    val fNode = Node("fNode", "6", null, fPaxosSmr, fPaxosAcceptor, fPaxosLearner, fPaxosProposer)
+
+    val aNode = Node("aNode", "1", aKeyValueClient, aPaxosSmr, aPaxosAcceptor, aPaxosLearner, aPaxosProposer)
+    val bNode = Node("bNode", "2", bKeyValueClient, bPaxosSmr, bPaxosAcceptor, bPaxosLearner, bPaxosProposer)
+    val cNode = Node("cNode", "3", cKeyValueClient, cPaxosSmr, cPaxosAcceptor, cPaxosLearner, cPaxosProposer)
+    val dNode = Node("dNode", "4", dKeyValueClient, dPaxosSmr, dPaxosAcceptor, dPaxosLearner, dPaxosProposer)
+    val eNode = Node("eNode", "5", eKeyValueClient, ePaxosSmr, ePaxosAcceptor, ePaxosLearner, ePaxosProposer)
+    val fNode = Node("fNode", "6", fKeyValueClient, fPaxosSmr, fPaxosAcceptor, fPaxosLearner, fPaxosProposer)
 
     val membership = Set(aNode, bNode, cNode, dNode, eNode, fNode)
     //Init
+
+    aPaxosSmr ! statemachinereplication.Init(membership, aNode)
+    bPaxosSmr ! statemachinereplication.Init(membership, bNode)
+    cPaxosSmr ! statemachinereplication.Init(membership, cNode)
+    dPaxosSmr ! statemachinereplication.Init(membership, dNode)
+    ePaxosSmr ! statemachinereplication.Init(membership, eNode)
+    fPaxosSmr ! statemachinereplication.Init(membership, fNode)
+
+
     aPaxosProposer ! Init(membership, aNode)
     aPaxosAcceptor ! Init(membership, aNode)
     aPaxosLearner ! Init(membership, aNode)
-    
+
 
     bPaxosProposer ! Init(membership, bNode)
     bPaxosAcceptor ! Init(membership, bNode)
@@ -81,7 +98,9 @@ object StateMachineReplicationMain extends App {
     fPaxosLearner ! Init(membership, fNode)
 
 
-    aNode.smrActor ! Get("a1", "a1mid")
+    //    aNode.smrActor ! Get("a1", "a1mid")
+    aNode.testAppActor ! TriggerPut(aNode.smrActor, "a1", "v1")
+
 
   }
 

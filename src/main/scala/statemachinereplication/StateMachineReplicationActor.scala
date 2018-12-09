@@ -23,28 +23,32 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
 
   override def receive: Receive = {
-    case i: Init =>
+    case i: statemachinereplication.Init =>
+      log.info(s"Init=$i")
       replicas = i.replicas
       myNode = i.myNode
-    case Get(key, mid) =>
-      log.info("GET")
+    case get@Get(key, mid) =>
+      log.info(get.toString)
       receiveGet(key, mid)
 
     case op: Operation => //TODO testar esta notação e experimetnar
+      log.info(op.toString)
       receiveUpdateOp(op)
 
-    case DecisionDelivery(decision: Event, instance) =>
+    case dd@DecisionDelivery(decision: Event, instance) =>
+      log.info(dd.toString)
       receiveDecision(decision, instance)
 
     case h: History =>
+      log.info(h.toString)
       executeHistory(h.history, h.index)
   }
 
 
   def receiveGet(key: String, mid: String): Unit = {
-    log.info(store.getOrElse(key, NotDefined))
+    log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=$sender")
 
-    sender ! GetReply(store.getOrElse(key, NotDefined), mid)
+    myNode.testAppActor ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
 
   def receiveUpdateOp(op: Operation): Unit = {
@@ -52,14 +56,17 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
       proposed += op.mid
       toBeProposed = toBeProposed.enqueue(Event(op, op.mid, sender))
 
-      if (current == 0)
+      if (current == 0) {
+        log.info(s"myNode.proposer=${myNode.proposerActor}")
         myNode.proposerActor ! Propose(toBeProposed.head, current)
+      }
     }
     else {
       val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
       if (eventOpt.isDefined) {
 
         sender ! Reply(eventOpt.get)
+
       }
     }
   }
@@ -73,6 +80,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
     if (toBeProposed.nonEmpty) {
       current = findValidIndex()
       myNode.proposerActor ! Propose(toBeProposed.head, current)
+      log.info(Propose(toBeProposed.head, current).toString)
     }
 
     if (previousCompleted(i))
@@ -95,6 +103,8 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
         replicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
+        log.info(s"${History(history, index).toString} to: $replica")
+
 
       case RemoveReplica(replica, _) =>
         oldValue = index.toString //TODO
@@ -105,6 +115,7 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
     history += (index -> history(index).copy(executed = true, returnValue = oldValue))
     event.sender ! Reply(event)
+    log.info(s"${Reply(event).toString} to: ${event.sender}")
   }
 
   private def updatePaxosReplicas(): Unit = {
@@ -158,7 +169,8 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
   private def findValidIndex(): Long = {
     val maxKey = history.keys.max
-    for (i <- 0 to maxKey.toInt) {//TODO
+    for (i <- 0 to maxKey.toInt) {
+      //TODO
       if (history.get(i).isEmpty)
         return i
     }

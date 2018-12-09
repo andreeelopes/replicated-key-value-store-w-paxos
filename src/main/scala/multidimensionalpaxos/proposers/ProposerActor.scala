@@ -49,24 +49,24 @@ class ProposerActor extends Actor with ActorLogging {
       snFactory = new SequenceNumber(myNode.getNodeID)
 
     case Propose(v, i) =>
-      log.info(s"[${System.nanoTime()}]  Propose($v, $i)")
+      //log.info(s"[${System.nanoTime()}]  Propose($v, $i)")
       proposerInstances += (i -> receivePropose(proposerInstances.getOrElse(i, ProposerInstance(i = i)), v))
 
     case PrepareOk(sna, va, i) =>
-      log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va, $i) | State($i) = ${proposerInstances(i)}")
+      //log.info(s"[${System.nanoTime()}]  Receive(PREPARE_OK, $sna, $va, $i) | State($i) = ${proposerInstances(i)}")
       proposerInstances += (i -> receivePrepareOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna, va))
 
     case AcceptOk(sna, i) =>
-      log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna, $i)")
+      //log.info(s"[${System.nanoTime()}]  Receive(ACCEPT_OK, $sna, $i)")
       proposerInstances += (i -> receiveAcceptOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna))
 
     case PrepareTimer(i) =>
-      log.info(s"[${System.nanoTime()}]  Prepare timer fired, i=$i")
+      //log.info(s"[${System.nanoTime()}]  Prepare timer fired, i=$i")
       val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
       proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
     case AcceptTimer(i) =>
-      log.info(s"[${System.nanoTime()}]  Accept timer fired, i=$i")
+      //log.info(s"[${System.nanoTime()}]  Accept timer fired, i=$i")
       val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
       proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
@@ -83,7 +83,7 @@ class ProposerActor extends Actor with ActorLogging {
     iProposer.sn = snFactory.getSN()
     iProposer.prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, PrepareTimer)
 
-    log.info(s"[${System.nanoTime()}]  Send(PREPARE,${iProposer.sn}, ${iProposer.i}) to: all acceptors")
+    //log.info(s"[${System.nanoTime()}]  Send(PREPARE,${iProposer.sn}, ${iProposer.i}) to: all acceptors")
     replicas.foreach(r => r.acceptorActor ! Prepare(iProposer.sn, iProposer.i))
 
     iProposer
@@ -104,7 +104,7 @@ class ProposerActor extends Actor with ActorLogging {
         iProposer.value = iProposer.lockedValue
       }
 
-      log.info(s"[${System.nanoTime()}]  Send(ACCEPT, ${iProposer.sn}, ${iProposer.value}) to: all")
+      //log.info(s"[${System.nanoTime()}]  Send(ACCEPT, ${iProposer.sn}, ${iProposer.value}) to: all")
       replicas.foreach(r => r.acceptorActor ! Accept(iProposer.sn, iProposer.value, iProposer.i))
       iProposer.acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.SECONDS), self, AcceptTimer)
     }
