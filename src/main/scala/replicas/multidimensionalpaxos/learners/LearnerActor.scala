@@ -1,7 +1,7 @@
 package replicas.multidimensionalpaxos.learners
 
 import akka.actor.{Actor, ActorLogging}
-import replicas.multidimensionalpaxos.{DecisionDelivery, Init, LockedValue}
+import replicas.multidimensionalpaxos.{DecisionDelivery, InitPaxos, LockedValue}
 import replicas.statemachinereplication.{Event, UpdateReplicas}
 import utils.ReplicaNode
 
@@ -16,8 +16,7 @@ class LearnerActor extends Actor with ActorLogging {
 
   override def receive = {
 
-    case Init(_replicas_, _myNode_) =>
-      replicas = _replicas_
+    case InitPaxos(_myNode_) =>
       myNode = _myNode_
     case UpdateReplicas(_replicas_) =>
       replicas = _replicas_

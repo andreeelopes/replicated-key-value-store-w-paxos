@@ -23,8 +23,7 @@ class AcceptorActor extends Actor with ActorLogging {
 
   override def receive = {
 
-    case Init(_replicas_, _myNode_) =>
-      replicas = _replicas_
+    case InitPaxos(_myNode_) =>
       myNode = _myNode_
 
     case UpdateReplicas(_replicas_) =>
@@ -45,7 +44,7 @@ class AcceptorActor extends Actor with ActorLogging {
       iAcceptor.np = n
 
       //log.info(s"[${System.nanoTime()}]  Send(PREPARE_OK, ${iAcceptor.na}, ${iAcceptor.va}, ${iAcceptor.i}) to: $sender")
-      sender ! PrepareOk(iAcceptor.na, iAcceptor.va, iAcceptor.i)
+      sender ! PrepareOk(iAcceptor.na, iAcceptor.va, iAcceptor.i, n)
     }
 
     iAcceptor
@@ -57,7 +56,7 @@ class AcceptorActor extends Actor with ActorLogging {
       iAcceptor.va = v
 
       //log.info(s"[${System.nanoTime()}]  Send(ACCEPT_OK , $n, ${iAcceptor.i}) to: $sender")
-      sender ! AcceptOk(iAcceptor.na, iAcceptor.i)
+      sender ! AcceptOk(iAcceptor.na, iAcceptor.i, n)
     }
 
     iAcceptor

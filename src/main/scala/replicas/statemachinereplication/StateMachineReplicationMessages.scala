@@ -16,7 +16,7 @@ abstract class Operation {
   def mid: String
 }
 
-case class Init(replicas: Set[ReplicaNode], myNode: ReplicaNode)
+case class InitSmr(myNode: ReplicaNode)
 
 case class GetRequest(key: String, mid: String) extends Operation
 

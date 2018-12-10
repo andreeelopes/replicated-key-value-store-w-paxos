@@ -6,11 +6,11 @@ import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
 
-case class StartTest(replicas: Set[ReplicaNode], clientActor: ActorRef, testDuration: Long)
+case class StartTest(clientActor: ActorRef, testDuration: Long)
 
-object Validate
+case class Validate()
 
-object State
+case class State()
 
 case class StateDelivery(history: Map[Long, Event], store: Map[String, String],
                          toBeProposed: Queue[Event], replicas: Set[ReplicaNode])

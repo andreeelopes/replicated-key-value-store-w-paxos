@@ -3,11 +3,12 @@ package replicas.statemachinereplication
 import akka.actor.{Actor, ActorLogging}
 import replicas.multidimensionalpaxos.{DecisionDelivery, Propose}
 import clients.test.{State, StateDelivery}
+import rendezvous.IdentifySmr
 import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
 
-class StateMachineReplicationActor extends Actor with ActorLogging {
+class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with ActorLogging {
   //State
   val NotDefined = "NA"
 
@@ -22,15 +23,19 @@ class StateMachineReplicationActor extends Actor with ActorLogging {
 
   var myNode: ReplicaNode = _
 
+  val rendezvous = context.actorSelection {
+    s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
+  }
+
 
   override def receive: Receive = {
-    case i: replicas.statemachinereplication.Init =>
+    case i: replicas.statemachinereplication.InitSmr =>
       ////log.info(s"Init=$i")
-      myReplicas = i.replicas
       myNode = i.myNode
+      rendezvous ! IdentifySmr(myNode)
 
     //Testing
-    case State =>
+    case State() =>
       sender ! StateDelivery(history, store, toBeProposed, myReplicas)
 
     case GetRequest(key, mid) =>

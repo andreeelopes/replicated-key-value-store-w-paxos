@@ -28,7 +28,6 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
   override def receive: Receive = {
 
     case i: InitClient =>
-      replicas = i.replicas.toList
       appActor = i.appActor
       var myReplicaId = i.smr
       if (i.smr == -1) {
@@ -90,6 +89,12 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
       myReplica = replicas(pickRandomSmr()).smrActor
 
       myReplica ! RemoveReplicaRequest(node, mid)
+
+
+
+    case update: UpdateReplicas =>
+      replicas = update.replicas.toList
+
   }
 
   def receivePut(key: String, value: String, mid: String) = {
