@@ -16,8 +16,6 @@ class TestActor() extends Actor with ActorLogging {
 
   case class OperationMetrics(time: Long, delivered: Boolean = false)
 
-  object ExecuteTest1
-
   val PutOperations = 100
   val KeyA = "keyA"
 
@@ -57,8 +55,6 @@ class TestActor() extends Actor with ActorLogging {
     case GetReply(_, _mid_) =>
       receiveReplyDelivery(Event(null, _mid_, null, null))
 
-    case ExecuteTest1 =>
-      receiveExecuteTest1()
 
     case a :UpdateReplicas =>
       replicas = a.replicas
@@ -67,12 +63,7 @@ class TestActor() extends Actor with ActorLogging {
 
   }
 
-  def receiveReplyDelivery(event: Event): Unit = {
-    if (System.currentTimeMillis() - testStart <= testDuration) {
-      //println(s"\nRecebi ${event.mid}\n")
-      opsTimes += (event.mid -> OperationMetrics(System.currentTimeMillis() - opsTimes(event.mid).time, delivered = true))
-    }
-  }
+
 
   def calculateMetrics(): Unit = {
 
@@ -123,19 +114,26 @@ class TestActor() extends Actor with ActorLogging {
   }
 
 
+  def receiveReplyDelivery(event: Event): Unit = {
+    if (System.currentTimeMillis() - testStart <= testDuration) {
+      //log.info(s"\nRecebi ${event.mid}\n")
+      opsTimes += (event.mid -> OperationMetrics(System.currentTimeMillis() - opsTimes(event.mid).time, delivered = true))
+      executeTestOp()
+    }
+  }
+
   def receiveStartTest(s: StartTest): Unit = {
     clientActor = s.clientActor
     testDuration = s.testDuration
     testStart = System.currentTimeMillis()
-
-
-    context.system.scheduler.schedule(Duration(0, TimeUnit.SECONDS), Duration(2000, TimeUnit.MICROSECONDS), self, ExecuteTest1)
+    executeTestOp()
   }
 
-  def receiveExecuteTest1(): Unit = {
+  def executeTestOp(): Unit = {
     if (System.currentTimeMillis() - testStart <= testDuration) {
 
       clientActor ! TestPut(KeyA, mid.toString, mid.toString)
+      //clientActor ! TestGet(KeyA, mid.toString)
       opsTimes += (mid.toString -> OperationMetrics(System.currentTimeMillis()))
 
       mid += 1
