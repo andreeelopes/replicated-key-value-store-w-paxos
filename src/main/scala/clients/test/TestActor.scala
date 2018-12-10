@@ -10,12 +10,9 @@ import ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 
-import rendezvous.IdentifyClient
-
-import scala.collection.script.Update
 
 
-class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with ActorLogging {
+class TestActor() extends Actor with ActorLogging {
 
   case class OperationMetrics(time: Long, delivered: Boolean = false)
 
@@ -34,10 +31,7 @@ class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with Ac
   var testStart: Long = _
   var mid = 0
 
-  val rendezvous = context.actorSelection {
-    s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
-  }
-  log.info(s"$rendezvous")
+
 
 
 
@@ -68,14 +62,14 @@ class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with Ac
 
     case a :UpdateReplicas =>
       replicas = a.replicas
-      clientActor ! a
+      //println(s"replicas: $replicas")
 
 
   }
 
   def receiveReplyDelivery(event: Event): Unit = {
     if (System.currentTimeMillis() - testStart <= testDuration) {
-      //          log.info(s"\nola\n")
+      //println(s"\nRecebi ${event.mid}\n")
       opsTimes += (event.mid -> OperationMetrics(System.currentTimeMillis() - opsTimes(event.mid).time, delivered = true))
     }
   }
@@ -86,16 +80,16 @@ class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with Ac
     throughput = timesOfOpsExecuted.size / (testDuration / 1000.0)
     latency = timesOfOpsExecuted.sum / timesOfOpsExecuted.size.toDouble
 
-    log.info(s"\n>>>Operations Times:\n${timesOfOpsExecuted.take(50)}\n")
-    log.info(s"Executed $mid operations (mid) | ${opsTimes.size}")
-    log.info(s"latency: $latency ms, throughput: $throughput ops/s\n\t\t\t\t\t\t\ttimesOfOpsExecuted:" +
+    println(s"\n>>>Operations Times:\n${timesOfOpsExecuted.take(50)}\n")
+    println(s"Executed $mid operations (mid) | ${opsTimes.size}")
+    println(s"latency: $latency ms, throughput: $throughput ops/s\n\t\t\t\t\t\t\ttimesOfOpsExecuted:" +
       s" ${timesOfOpsExecuted.size}, testDuration: $testDuration, timesOfOpsExecuted.sum: ${timesOfOpsExecuted.sum}\n\n")
   }
 
 
   private def validateReplicasState(): Unit = {
     var valid: Boolean = true
-    log.info(s">>> Starting Validation...") //\n\nstates=$states\n\n")
+    log.error(s">>> Starting Validation...") //\n\nstates=$states\n\n")
     if (states.count { state => state.history.equals(states.head.history) } != states.size) {
       log.error("Different histories!")
       valid = false
@@ -124,7 +118,7 @@ class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with Ac
 
     }
     if (valid)
-      log.info(">>> Validation completed with Success!")
+      println(">>> Validation completed with Success!")
 
   }
 
@@ -134,10 +128,8 @@ class TestActor(rendezvousIP: String, rendezvousPort: Int) extends Actor with Ac
     testDuration = s.testDuration
     testStart = System.currentTimeMillis()
 
-    rendezvous ! "IdentifyClient"
 
-
-    context.system.scheduler.schedule(Duration(40, TimeUnit.SECONDS), Duration(2000, TimeUnit.MICROSECONDS), self, ExecuteTest1)
+    context.system.scheduler.schedule(Duration(0, TimeUnit.SECONDS), Duration(2000, TimeUnit.MICROSECONDS), self, ExecuteTest1)
   }
 
   def receiveExecuteTest1(): Unit = {

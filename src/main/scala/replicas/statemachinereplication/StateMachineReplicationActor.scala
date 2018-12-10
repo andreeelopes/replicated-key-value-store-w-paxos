@@ -30,7 +30,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
   override def receive: Receive = {
     case i: replicas.statemachinereplication.InitSmr =>
-      ////log.info(s"Init=$i")
+      //println(s"Init=$i")
       myNode = i.myNode
       rendezvous ! IdentifySmr(myNode)
 
@@ -38,26 +38,31 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     case State() =>
       sender ! StateDelivery(history, store, toBeProposed, myReplicas)
 
-    case GetRequest(key, mid) =>
-      //log.info(Get(key, mid).toString)
+    case get@GetRequest(key, mid) =>
+      //println(get.toString)
       receiveGet(key, mid)
 
     case op: Operation =>
-      //log.info(op.toString)
+      ////println(op.toString)
       receiveUpdateOp(op)
 
     case dd@DecisionDelivery(decision: Event, instance) =>
-     //log.info(dd.toString)
+      //println(dd.toString)
       receiveDecision(decision, instance)
 
     case h: History =>
-      //log.info(h.toString)
+      //println(h.toString)
       executeHistory(h.history, h.index)
+
+    case a :UpdateReplicas =>
+      myReplicas = a.replicas
+      //println(s"replicas: $myReplicas")
+      updatePaxosReplicas()
   }
 
 
   def receiveGet(key: String, mid: String): Unit = {
-    //log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
+    //println(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
 
     sender ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
@@ -92,7 +97,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     if (toBeProposed.nonEmpty) {
       current = findValidIndex()
       myNode.proposerActor ! Propose(toBeProposed.head, current)
-      //log.info(Propose(toBeProposed.head, current).toString)
+      //println(Propose(toBeProposed.head, current).toString)
 
     }
 
@@ -118,7 +123,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
         myReplicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
-      //log.info(s"${History(history, index).toString} to: $replica")
+        //println(s"${History(history, index).toString} to: $replica")
 
 
       case RemoveReplicaRequest(replica, _) =>
@@ -131,11 +136,12 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
     if (event.replica.equals(myNode) || !myReplicas.contains(event.replica)) {
+      //println(s"Send(REPLY, $event) to: ${event.sender}")
       event.sender ! Reply(event)
     }
 
-    ////log.info(s"STORE: ${store.toString()}")
-    ////log.info(s"HISTORY: ${history.toString()}")
+    //println(s"STORE: ${store.toString()}")
+    //println(s"HISTORY: ${history.toString()}")
 
   }
 

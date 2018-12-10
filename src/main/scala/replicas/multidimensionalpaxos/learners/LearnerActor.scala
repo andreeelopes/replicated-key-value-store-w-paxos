@@ -22,7 +22,7 @@ class LearnerActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case LockedValue(value, i) =>
-      //log.info(s"[${System.nanoTime()}]  Receive(LOCKED_VALUE, $value, $i) from: $sender")
+      //println(s"  Receive(LOCKED_VALUE, $value, $i) from: $sender")
       learnerInstances += (i -> receiveLockedValue(learnerInstances.getOrElse(i, LearnerInstance(i = i)), value))
 
   }
@@ -30,8 +30,8 @@ class LearnerActor extends Actor with ActorLogging {
   def receiveLockedValue(iLearner: LearnerInstance, value: Event) = {
     if (!iLearner.decided) {
       iLearner.decided = true
-
-      //log.info(s"[${System.nanoTime()}]  I learner $myNode have decided = (value=$value, i=${iLearner.i})")
+//
+      //println(s"I learner $myNode have decided = (value=$value, i=${iLearner.i})")
       myNode.smrActor ! DecisionDelivery(value, iLearner.i)
     }
 

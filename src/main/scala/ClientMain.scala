@@ -13,29 +13,24 @@ object ClientMain extends App {
     val configuration = ConfigFactory.parseString(Utils.getConf(ip, port))
 
 
-    println(configuration)
+    //println(configuration)
 
     val rendezvousIP = "127.0.0.1"
     val rendezvousPort = 69
 
     val clientActorSystem = ActorSystem("RemoteService", config = configuration)
 
-    val testActor = clientActorSystem.actorOf(Props(new TestActor(rendezvousIP, rendezvousPort)), "testActor")
-    val clientActor = clientActorSystem.actorOf(Props(new ClientActor(ip, port.toInt)), "clientActor")
+    val testActor = clientActorSystem.actorOf(Props[TestActor], "testActor")
+    val clientActor = clientActorSystem.actorOf(Props(new ClientActor(ip, port.toInt, rendezvousIP, rendezvousPort)), "clientActor")
 
-
-    testActor ! StartTest(clientActor, 20000)//processo de indentificacao
-
-    Thread.sleep(10000) //wait for response of rendezvous with the replicas
 
     clientActor ! InitClient(-1, testActor) // -1 for random smr
 
+    Thread.sleep(20000) //wait for response of rendezvous with the replicas
+
+    testActor ! StartTest(clientActor, testDuration=20000) //processo de indentificacao
+
     Thread.sleep(25000)
     testActor ! Validate()
-
-
-    Thread.sleep(10000)
-
-    clientActorSystem.terminate()
   }
 }

@@ -1,8 +1,9 @@
 package rendezvous
 
+import akka.actor.ActorRef
 import utils.ReplicaNode
 
 
 case class IdentifySmr(node: ReplicaNode)
 
-object IdentifyClient
+case class IdentifyClient(client: ActorRef)

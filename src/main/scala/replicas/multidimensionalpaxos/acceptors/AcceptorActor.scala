@@ -30,11 +30,11 @@ class AcceptorActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case Prepare(n, i) =>
-      //log.info(s"[${System.nanoTime()}]  Receive(PREPARE, $n, $i) from: $sender")
+      //println(s"  Receive(PREPARE, $n, $i) from: $sender")
       acceptorInstances += (i -> receivePrepare(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n))
 
     case Accept(n, v, i) =>
-      //log.info(s"[${System.nanoTime()}]  Receive(Accept, $n, $v, $i) | State($i) = ${acceptorInstances(i)}")
+      //println(s"  Receive(Accept, $n, $v, $i) | State($i) = ${acceptorInstances(i)}")
       acceptorInstances += (i -> receiveAccept(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n, v))
 
   }
@@ -43,7 +43,7 @@ class AcceptorActor extends Actor with ActorLogging {
     if (n > iAcceptor.np) {
       iAcceptor.np = n
 
-      //log.info(s"[${System.nanoTime()}]  Send(PREPARE_OK, ${iAcceptor.na}, ${iAcceptor.va}, ${iAcceptor.i}) to: $sender")
+      //println(s"  Send(PREPARE_OK, ${iAcceptor.na}, ${iAcceptor.va}, ${iAcceptor.i}) to: $sender")
       sender ! PrepareOk(iAcceptor.na, iAcceptor.va, iAcceptor.i, n)
     }
 
@@ -55,7 +55,7 @@ class AcceptorActor extends Actor with ActorLogging {
       iAcceptor.na = n
       iAcceptor.va = v
 
-      //log.info(s"[${System.nanoTime()}]  Send(ACCEPT_OK , $n, ${iAcceptor.i}) to: $sender")
+      //println(s"  Send(ACCEPT_OK , $n, ${iAcceptor.i}) to: $sender")
       sender ! AcceptOk(iAcceptor.na, iAcceptor.i, n)
     }
 

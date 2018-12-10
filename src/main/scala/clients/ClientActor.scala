@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
 import clients.test.{TestAddReplica, TestGet, TestPut, TestRemoveReplica}
+import rendezvous.IdentifyClient
 import replicas.statemachinereplication
 import replicas.statemachinereplication._
 import utils.ReplicaNode
@@ -13,7 +14,7 @@ import ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 
-class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
+class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: Int) extends Actor with ActorLogging {
 
   val OperationTimeout = 1
 
@@ -24,16 +25,19 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
 
   var timers = Map[String, Cancellable]()
 
+  val rendezvous = context.actorSelection {
+    s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
+  }
+  //println(s"$rendezvous")
+
+  rendezvous ! IdentifyClient(self)
+
 
   override def receive: Receive = {
 
     case i: InitClient =>
       appActor = i.appActor
-      var myReplicaId = i.smr
-      if (i.smr == -1) {
-        myReplicaId = pickRandomSmr()
-      }
-      myReplica = replicas(myReplicaId).smrActor
+
 
     case Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
       myReplica ! GetRequest(key, generateMID())
@@ -60,6 +64,7 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
 
     case Reply(event) =>
       if (!delivered.contains(event.mid)) {
+        //println(s"Receive(REPLY, $event)")
         delivered += event.mid
         appActor ! ReplyDelivery(event)
       }
@@ -93,7 +98,12 @@ class ClientActor(ip: String, port: Int) extends Actor with ActorLogging {
 
 
     case update: UpdateReplicas =>
+      //println(s"UpdateReplicas = $update")
       replicas = update.replicas.toList
+      appActor ! update
+      //println(s">>>replicas: $replicas")
+
+      myReplica = replicas(pickRandomSmr()).smrActor
 
   }
 
