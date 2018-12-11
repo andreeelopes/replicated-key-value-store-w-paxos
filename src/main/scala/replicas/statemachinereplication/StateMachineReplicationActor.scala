@@ -43,11 +43,11 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
       receiveGet(key, mid)
 
     case op: Operation =>
-      println(op.toString)
+      //println(op.toString)
       receiveUpdateOp(op)
 
     case dd: DecisionDelivery =>
-      println(dd.toString)
+      //println(dd.toString)
       receiveDecision(dd.decision, dd.instance)
 
     case h: History =>

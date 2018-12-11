@@ -26,11 +26,11 @@ object ClientMain extends App {
 
     clientActor ! InitClient(-1, testActor) // -1 for random smr
 
-    Thread.sleep(20000) //wait for response of rendezvous with the replicas
+    Thread.sleep(90*1000) //wait for response of rendezvous with the replicas
 
     testActor ! StartTest(clientActor, testDuration=20000) //processo de indentificacao
 
-    Thread.sleep(25000)
+    Thread.sleep(60*1000)
     testActor ! Validate()
   }
 }

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef}
 import replicas.statemachinereplication.UpdateReplicas
 import utils.ReplicaNode
 
-class RendezvousActor(numberOfReplicas: Int) extends Actor with ActorLogging {
+class RendezvousActor(numberOfReplicas: Int, numberOfClients: Int) extends Actor with ActorLogging {
 
   var clients = Set[ActorRef]()
   var membership = Set[ReplicaNode]()
@@ -13,8 +13,8 @@ class RendezvousActor(numberOfReplicas: Int) extends Actor with ActorLogging {
   override def receive: Receive = {
     case identification: IdentifySmr =>
       membership += identification.node
-      if (membership.size == numberOfReplicas) {
-        //println(s"membership: $membership")
+      if (membership.size + clients.size == numberOfReplicas + numberOfClients) {
+        println(s"membership: $membership")
         membership.foreach { member => member.smrActor ! UpdateReplicas(membership) }
         // println(s"Sending membership to $member")}
         clients.foreach { client => client ! UpdateReplicas(membership) }
@@ -22,7 +22,16 @@ class RendezvousActor(numberOfReplicas: Int) extends Actor with ActorLogging {
       }
 
     case IdentifyClient(client: ActorRef) =>
-      //println(s"Client= $client | path ${client.path}")
+      println(s"Client= $client | path ${client.path}")
       clients += client
+
+      if (membership.size + clients.size == numberOfReplicas + numberOfClients) {
+        println(s"membership: $membership")
+        membership.foreach { member => member.smrActor ! UpdateReplicas(membership) }
+        // println(s"Sending membership to $member")}
+        clients.foreach { client => client ! UpdateReplicas(membership) }
+        //println(s"Sending membership to $client")}
+      }
+
   }
 }

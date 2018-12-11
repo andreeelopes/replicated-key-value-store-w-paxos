@@ -13,7 +13,7 @@ object RendezvousMain extends App {
 
     val rendezvousSystem = ActorSystem("RemoteService", config = configuration)
 
-    val rendezvousActor = rendezvousSystem.actorOf(Props(new RendezvousActor(args(0).toInt)), "rendezvous")
+    val rendezvousActor = rendezvousSystem.actorOf(Props(new RendezvousActor(args(0).toInt, args(1).toInt)), "rendezvous")
 
 
     //println(configuration)
