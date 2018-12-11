@@ -3,7 +3,7 @@ package clients
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
-import clients.test.{TestAddReplica, TestGet, TestPut, TestRemoveReplica}
+import clients.test._
 import rendezvous.IdentifyClient
 import replicas.statemachinereplication
 import replicas.statemachinereplication._
@@ -39,14 +39,17 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
       appActor = i.appActor
 
 
-    case Get(key) => // TODO adicionar timer para lidar com a possibilidade de o smr nao responder ao get
-      myReplica ! GetRequest(key, generateMID())
+    case WeakGet(key) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
+      receiveWeakOp(WeakGetRequest(key, generateMID()))
 
+    case StrongGet(key) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
+      receiveStrongOp(StrongGetRequest(key, generateMID()))
 
     case Put(key, value) =>
       myReplica = replicas(pickRandomSmr()).smrActor
-      receivePut(key, value, generateMID())
-
+      receiveStrongOp(PutRequest(key, value, generateMID()))
 
     case AddReplica(node) =>
       myReplica ! AddReplicaRequest(node, generateMID())
@@ -55,6 +58,14 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
       myReplica ! RemoveReplicaRequest(node, generateMID())
 
     case ResendOp(op) =>
+      if (!delivered.contains(op.mid))
+        myReplica ! op
+      else {
+        timers(op.mid).cancel()
+        timers -= op.mid
+      }
+
+    case ResendWeakOp(op) =>
       if (!delivered.contains(op.mid))
         myReplica ! op
       else {
@@ -75,15 +86,20 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
         appActor ! GetReply(value, mid)
       }
 
-    case TestGet(key, mid) =>
+    case TestWeakGet(key, mid) =>
       myReplica = replicas(pickRandomSmr()).smrActor
 
-      myReplica ! GetRequest(key, mid)
+      myReplica ! WeakGetRequest(key, mid)
+
+    case TestStrongGet(key, mid) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
+
+      receiveStrongOp(StrongGetRequest(key, mid))
 
     case TestPut(key, value, mid) =>
       myReplica = replicas(pickRandomSmr()).smrActor
 
-      receivePut(key, value, mid)
+      receiveStrongOp(PutRequest(key, value, mid))
 
     case TestAddReplica(node, mid) =>
       myReplica = replicas(pickRandomSmr()).smrActor
@@ -96,25 +112,27 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
       myReplica ! RemoveReplicaRequest(node, mid)
 
 
-
     case update: UpdateReplicas =>
-      //println(s"UpdateReplicas = $update")
       replicas = update.replicas.toList
       appActor ! update
-      //println(s">>>replicas: $replicas")
-
       myReplica = replicas(pickRandomSmr()).smrActor
 
   }
 
-  def receivePut(key: String, value: String, mid: String) = {
-    val op = PutRequest(key, value, mid)
+  def receiveStrongOp(op: Operation) = {
     myReplica ! op
     timers += (op.mid -> context.system.scheduler.scheduleOnce(
       Duration(OperationTimeout, TimeUnit.SECONDS),
       self, ResendOp(op)))
   }
 
+  def receiveWeakOp(op: WeakGetRequest) = {
+    myReplica ! op
+
+    timers += (op.mid -> context.system.scheduler.scheduleOnce(
+      Duration(OperationTimeout, TimeUnit.SECONDS),
+      self, ResendWeakOp(op)))
+  }
 
   private def generateMID(): String = {
     ip + port + System.nanoTime()

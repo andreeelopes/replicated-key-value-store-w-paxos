@@ -18,9 +18,11 @@ abstract class Operation {
 
 case class InitSmr(myNode: ReplicaNode)
 
-case class GetRequest(key: String, mid: String) extends Operation
+case class WeakGetRequest(key: String, mid: String) extends Operation
 
 case class PutRequest(key: String, value: String, mid: String) extends Operation
+
+case class StrongGetRequest(key: String, mid: String) extends Operation
 
 case class AddReplicaRequest(replica: ReplicaNode, mid: String) extends Operation
 
