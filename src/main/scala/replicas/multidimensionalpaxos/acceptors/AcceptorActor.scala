@@ -10,7 +10,7 @@ import utils.ReplicaNode
   * @param na highest accept
   * @param va highest accept val
   */
-case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: Event = null, var i: Long) {
+case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: List[Event] = null, var i: Long) {
   override def toString = s"{np=$np, na=$na, va=$na}"
 }
 
@@ -50,7 +50,7 @@ class AcceptorActor extends Actor with ActorLogging {
     iAcceptor
   }
 
-  def receiveAccept(iAcceptor: AcceptorInstance, n: Int, v: Event) = {
+  def receiveAccept(iAcceptor: AcceptorInstance, n: Int, v: List[Event]) = {
     if (n >= iAcceptor.np) {
       iAcceptor.na = n
       iAcceptor.va = v

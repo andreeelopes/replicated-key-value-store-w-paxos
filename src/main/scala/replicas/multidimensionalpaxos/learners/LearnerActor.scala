@@ -27,7 +27,7 @@ class LearnerActor extends Actor with ActorLogging {
 
   }
 
-  def receiveLockedValue(iLearner: LearnerInstance, value: Event) = {
+  def receiveLockedValue(iLearner: LearnerInstance, value: List[Event]) = {
     if (!iLearner.decided) {
       iLearner.decided = true
 //

@@ -12,7 +12,7 @@ case class Validate()
 
 case class State()
 
-case class StateDelivery(history: Map[Long, Event], store: Map[String, String],
+case class StateDelivery(history: Map[Long, List[Event]], store: Map[String, String],
                          toBeProposed: Queue[Event], replicas: Set[ReplicaNode])
 
 case class TestGet(key: String, mid: String)

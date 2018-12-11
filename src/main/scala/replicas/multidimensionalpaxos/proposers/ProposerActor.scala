@@ -19,9 +19,9 @@ import scala.concurrent.duration.Duration
   * @param highestSna  highest sna seen so far on received prepare ok messages
   * @param lockedValue value corresponding to the highestSna received
   */
-case class ProposerInstance(var sn: Int = -1, var value: Event = null, var prepares: Int = 0,
+case class ProposerInstance(var sn: Int = -1, var value: List[Event] = null, var prepares: Int = 0,
                             var accepts: Int = 0, var highestSna: Int = -1,
-                            var lockedValue: Event = null, var prevMajority: Boolean = false,
+                            var lockedValue: List[Event] = null, var prevMajority: Boolean = false,
                             var prepareTimer: Cancellable = null, var acceptTimer: Cancellable = null, var i: Long) {
 
   override def toString = s"{sn=$sn, value=$value, prepares=$prepares, " +
@@ -76,32 +76,19 @@ class ProposerActor extends Actor with ActorLogging {
   }
 
 
-  def receivePropose(iProposer: ProposerInstance, v: Event) = {
+  def receivePropose(iProposer: ProposerInstance, v: List[Event]) = {
 
     resetState(iProposer)
     iProposer.value = v
     iProposer.sn = snFactory.getSN()
     iProposer.prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.MILLISECONDS), self, PrepareTimer)
 
-    //println(s"  Send(PREPARE,${iProposer.sn}, ${iProposer.i}) to: all acceptors")
-    //println(s"acceptor: ${replicas.head.acceptorActor}")
-    //println(s"proposer: ${replicas.head.proposerActor}")
-    //println(s"learner: ${replicas.head.learnerActor}")
-    //println(s"smr: ${replicas.head.smrActor}")
-    replicas.foreach { r =>
-      //println(s"acceptor: ${r.acceptorActor}")
-      //println(s"proposer: ${r.proposerActor}")
-      //println(s"learner: ${r.learnerActor}")
-      //println(s"smr: ${r.smrActor}")
-
-
-      r.acceptorActor ! Prepare(iProposer.sn, iProposer.i)
-    }
+    replicas.foreach(r => r.acceptorActor ! Prepare(iProposer.sn, iProposer.i))
 
     iProposer
   }
 
-  def receivePrepareOk(iProposer: ProposerInstance, sna: Int, va: Event, snSent: Int) = {
+  def receivePrepareOk(iProposer: ProposerInstance, sna: Int, va: List[Event], snSent: Int) = {
     if (snSent == iProposer.sn) {
       iProposer.prepares += 1
       if (sna > iProposer.highestSna && va != null) {

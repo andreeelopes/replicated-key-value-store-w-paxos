@@ -12,7 +12,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
   //State
   val NotDefined = "NA"
 
-  var history = Map[Long, Event]() // array that contains the history of operations [i, (op, returnValue, mid)]
+  var history = Map[Long, List[Event]]() // array that contains the history of operations [i, (op, returnValue, mid)]
   var current: Long = 0 // current op
   var store = Map[String, String]() // key value store
   var toBeProposed = Queue[Event]() // queue with ops to be proposed (op, sender, mid)
@@ -43,18 +43,18 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
       receiveGet(key, mid)
 
     case op: Operation =>
-      ////println(op.toString)
+      println(op.toString)
       receiveUpdateOp(op)
 
-    case dd@DecisionDelivery(decision: Event, instance) =>
-      //println(dd.toString)
-      receiveDecision(decision, instance)
+    case dd : DecisionDelivery =>
+      println(dd.toString)
+      receiveDecision(dd.decision, dd.instance)
 
     case h: History =>
       //println(h.toString)
       executeHistory(h.history, h.index)
 
-    case a :UpdateReplicas =>
+    case a: UpdateReplicas =>
       myReplicas = a.replicas
       //println(s"replicas: $myReplicas")
       updatePaxosReplicas()
@@ -74,36 +74,34 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
       if (toBeProposed.size == 1) {
         current = findValidIndex()
-        myNode.proposerActor ! Propose(toBeProposed.head, current)
+        myNode.proposerActor ! Propose(toBeProposed.toList, current)
       }
 
     }
     else {
-      val eventOpt = history.values.find(e => e.mid.equals(op.mid) && e.executed)
+      val eventOpt = history.values.flatten.find(e => e.mid.equals(op.mid) && e.executed)
       if (eventOpt.isDefined) {
         sender ! Reply(eventOpt.get)
       }
     }
   }
 
-  def receiveDecision(op: Event, i: Long): Unit = {
+  def receiveDecision(ops: List[Event], i: Long): Unit = {
     //    if(!executed.contains(op.mid)) { TODO - evitar executar duas vezes
-    history += (i -> op)
+    history += (i -> ops)
 
-    if (toBeProposed.nonEmpty && toBeProposed.head.equals(op))
-      toBeProposed = toBeProposed.dequeue._2
-
+    if (toBeProposed.nonEmpty && toBeProposed.containsSlice(ops))
+      toBeProposed = toBeProposed.filterNot(op => ops.contains(op))
 
     if (toBeProposed.nonEmpty) {
       current = findValidIndex()
-      myNode.proposerActor ! Propose(toBeProposed.head, current)
+      myNode.proposerActor ! Propose(toBeProposed.toList, current)
       //println(Propose(toBeProposed.head, current).toString)
-
     }
 
-    if (previousCompleted(i)) {
-      executeOp(op, i)
-    }
+    if (previousCompleted(i))
+      ops.foreach(op => executeOp(op, i))
+
     //    } TODO - evitar executar duas vezes
   }
 
@@ -116,14 +114,13 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
       case PutRequest(key, value, _) =>
         oldValue = store.getOrElse(key, NotDefined)
         store += (key -> value)
-        history += (index -> history(index).copy(executed = true, returnValue = oldValue))
 
       case AddReplicaRequest(replica, _) =>
         oldValue = index.toString
         myReplicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
-        //println(s"${History(history, index).toString} to: $replica")
+      //println(s"${History(history, index).toString} to: $replica")
 
 
       case RemoveReplicaRequest(replica, _) =>
@@ -133,7 +130,9 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
     }
 
-    history += (index -> history(index).copy(executed = true, returnValue = oldValue))
+    history += (index -> history(index).map { e =>
+      if (e.equals(event)) event.copy(executed = true, returnValue = oldValue) else e
+    })
 
     if (event.replica.equals(myNode) || !myReplicas.contains(event.replica)) {
       //println(s"Send(REPLY, $event) to: ${event.sender}")
@@ -151,30 +150,34 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     myNode.proposerActor ! UpdateReplicas(myReplicas)
   }
 
-  private def executeHistory(_history_ : Map[Long, Event], index: Long): Unit = {
+  private def executeHistory(_history_ : Map[Long, List[Event]], index: Long): Unit = {
 
     if (!historyProcessed) {
       historyProcessed = true
       _history_.foreach { p =>
-        val event = p._2
-        var oldValue: String = null
-        event.op match {
-          case PutRequest(key, value, _) =>
-            oldValue = store.getOrElse(key, NotDefined)
-            store += (key -> value)
-            history += (index -> history(index).copy(executed = true, returnValue = oldValue))
+        p._2.foreach { event =>
 
-          case AddReplicaRequest(replica, _) =>
-            oldValue = index.toString
-            myReplicas += replica
-            updatePaxosReplicas()
+          var oldValue: String = null
+          event.op match {
+            case PutRequest(key, value, _) =>
+              oldValue = store.getOrElse(key, NotDefined)
+              store += (key -> value)
 
-          case RemoveReplicaRequest(replica, _) =>
-            oldValue = index.toString
-            myReplicas -= replica
-            updatePaxosReplicas()
+            case AddReplicaRequest(replica, _) =>
+              oldValue = index.toString
+              myReplicas += replica
+              updatePaxosReplicas()
+
+            case RemoveReplicaRequest(replica, _) =>
+              oldValue = index.toString
+              myReplicas -= replica
+              updatePaxosReplicas()
+          }
+
+          history += (index -> history(index).map { e =>
+            if (e.equals(event)) event.copy(executed = true, returnValue = oldValue) else e
+          })
         }
-        history += (index -> history(index).copy(executed = true, returnValue = oldValue))
       }
     }
   }
@@ -188,8 +191,9 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     for (i <- 0 until index.toInt) {
       if (history.get(i).isEmpty)
         return false
-      if (!history(i).executed)
-        executeOp(history(i), i)
+      //it is enough to check the head
+      if (!history(i).head.executed)
+        history(i).foreach(event => executeOp(event, i))
     }
     true
   }

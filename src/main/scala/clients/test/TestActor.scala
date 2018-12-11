@@ -31,8 +31,6 @@ class TestActor() extends Actor with ActorLogging {
 
 
 
-
-
   override def receive = {
 
     case s: StartTest =>
@@ -67,7 +65,7 @@ class TestActor() extends Actor with ActorLogging {
 
   def calculateMetrics(): Unit = {
 
-    var timesOfOpsExecuted = opsTimes.values.filter(metrics => metrics.delivered).map(m => m.time)
+    val timesOfOpsExecuted = opsTimes.values.filter(metrics => metrics.delivered).map(m => m.time)
     throughput = timesOfOpsExecuted.size / (testDuration / 1000.0)
     latency = timesOfOpsExecuted.sum / timesOfOpsExecuted.size.toDouble
 
@@ -86,10 +84,10 @@ class TestActor() extends Actor with ActorLogging {
       valid = false
     }
 
-    if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
-      log.error("Different executed ops!")
-      valid = false
-    }
+// TODO   if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
+//      log.error("Different executed ops!")
+//      valid = false
+//    }
 
     if (states.count { state => state.replicas.equals(states.head.replicas) } != states.size) {
       log.error("Different replicas!")

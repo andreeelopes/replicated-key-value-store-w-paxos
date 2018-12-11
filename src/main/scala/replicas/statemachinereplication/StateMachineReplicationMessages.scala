@@ -26,7 +26,7 @@ case class AddReplicaRequest(replica: ReplicaNode, mid: String) extends Operatio
 
 case class RemoveReplicaRequest(replica: ReplicaNode, mid: String) extends Operation
 
-case class History(history: Map[Long, Event], index: Long)
+case class History(history: Map[Long, List[Event]], index: Long)
 
 case class Reply(event: Event)
 
