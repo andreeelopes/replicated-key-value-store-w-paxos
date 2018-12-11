@@ -38,7 +38,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     case State() =>
       sender ! StateDelivery(history, store, toBeProposed, myReplicas)
 
-    case get@GetRequest(key, mid) =>
+    case get@WeakGetRequest(key, mid) =>
       //println(get.toString)
       receiveGet(key, mid)
 
@@ -46,7 +46,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
       println(op.toString)
       receiveUpdateOp(op)
 
-    case dd : DecisionDelivery =>
+    case dd: DecisionDelivery =>
       println(dd.toString)
       receiveDecision(dd.decision, dd.instance)
 
@@ -115,6 +115,9 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
         oldValue = store.getOrElse(key, NotDefined)
         store += (key -> value)
 
+      case StrongGetRequest(key, _) =>
+        oldValue = store.getOrElse(key, NotDefined)
+
       case AddReplicaRequest(replica, _) =>
         oldValue = index.toString
         myReplicas += replica
@@ -162,6 +165,9 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
             case PutRequest(key, value, _) =>
               oldValue = store.getOrElse(key, NotDefined)
               store += (key -> value)
+
+            case StrongGetRequest(key, _) =>
+              oldValue = store.getOrElse(key, NotDefined)
 
             case AddReplicaRequest(replica, _) =>
               oldValue = index.toString
