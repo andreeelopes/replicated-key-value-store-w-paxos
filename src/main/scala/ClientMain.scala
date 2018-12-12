@@ -10,6 +10,7 @@ object ClientMain extends App {
   override def main(args: Array[String]) = {
     val ip = args(0)
     val port = args(1)
+    val testType = args(2).toInt
     val configuration = ConfigFactory.parseString(Utils.getConf(ip, port))
 
 
@@ -26,11 +27,11 @@ object ClientMain extends App {
 
     clientActor ! InitClient(-1, testActor) // -1 for random smr
 
-    Thread.sleep(90*1000) //wait for response of rendezvous with the replicas
+    Thread.sleep(10000) //wait for response of rendezvous with the replicas
 
-    testActor ! StartTest(clientActor, testDuration=20000) //processo de indentificacao
+    testActor ! StartTest(clientActor, testDuration=20000, testType) //processo de indentificacao
 
-    Thread.sleep(60*1000)
+    Thread.sleep(50*1000)
     testActor ! Validate()
   }
 }

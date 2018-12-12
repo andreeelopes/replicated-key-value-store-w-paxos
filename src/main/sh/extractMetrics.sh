@@ -2,7 +2,7 @@
 
 dir=$1/clients
 
-mkdir $dir/../metrics
+mkdir -p $dir/../metrics
 
 
 for i in $dir/*

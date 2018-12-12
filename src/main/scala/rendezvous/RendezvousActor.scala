@@ -33,5 +33,9 @@ class RendezvousActor(numberOfReplicas: Int, numberOfClients: Int) extends Actor
         //log.info(s"Sending membership to $client")}
       }
 
+    case g: GetClient =>
+      sender ! GetClient(clients.head)
+
+
   }
 }

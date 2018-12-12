@@ -1,9 +1,10 @@
 package replicas.statemachinereplication
 
 import akka.actor.{Actor, ActorLogging}
+import clients.AddReplica
 import replicas.multidimensionalpaxos.{DecisionDelivery, Propose}
 import clients.test.{State, StateDelivery}
-import rendezvous.IdentifySmr
+import rendezvous.{GetClient, IdentifySmr}
 import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
@@ -23,14 +24,23 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
   var myNode: ReplicaNode = _
 
+  var lastExecuted = 0
+
   val rendezvous = context.actorSelection {
     s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
   }
 
 
   override def receive: Receive = {
-    case i: replicas.statemachinereplication.InitSmr =>
-      //log.info(s"Init=$i")
+    case i: InitJoiningSmr =>
+      rendezvous ! GetClient(null)
+      myNode = i.myNode
+
+    case GetClient(client) =>
+      client ! AddReplica(myNode)
+
+    case i: InitSmr =>
+      //println(s"Init=$i")
       myNode = i.myNode
       rendezvous ! IdentifySmr(myNode)
 
@@ -39,30 +49,30 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
       sender ! StateDelivery(history, store, toBeProposed, myReplicas)
 
     case get@WeakGetRequest(key, mid) =>
-      //log.info(get.toString)
+      //println(get.toString)
       receiveGet(key, mid)
 
     case op: Operation =>
-      //log.info(op.toString)
+      //println(op.toString)
       receiveUpdateOp(op)
 
     case dd: DecisionDelivery =>
-      //log.info(dd.toString)
+      //println(dd.toString)
       receiveDecision(dd.decision, dd.instance)
 
     case h: History =>
-      //log.info(h.toString)
+      //println(h.toString)
       executeHistory(h.history, h.index)
 
     case a: UpdateReplicas =>
       myReplicas = a.replicas
-      //log.info(s"replicas: $myReplicas")
+      println(s"replicas: $myReplicas")
       updatePaxosReplicas()
   }
 
 
   def receiveGet(key: String, mid: String): Unit = {
-    //log.info(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
+    //println(s"GET($key)=${store.getOrElse(key, NotDefined)}, sender=${sender.path.name}")
 
     sender ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
@@ -87,7 +97,6 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
   }
 
   def receiveDecision(ops: List[Event], i: Long): Unit = {
-    //    if(!executed.contains(op.mid)) { TODO - evitar executar duas vezes
     history += (i -> ops)
 
     if (toBeProposed.nonEmpty && toBeProposed.containsSlice(ops))
@@ -96,13 +105,11 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     if (toBeProposed.nonEmpty) {
       current = findValidIndex()
       myNode.proposerActor ! Propose(toBeProposed.toList, current)
-      //log.info(Propose(toBeProposed.head, current).toString)
+      //println(Propose(toBeProposed.head, current).toString)
     }
 
     if (previousCompleted(i))
       ops.foreach(op => executeOp(op, i))
-
-    //    } TODO - evitar executar duas vezes
   }
 
 
@@ -123,7 +130,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
         myReplicas += replica
         updatePaxosReplicas()
         replica.smrActor ! History(history, index)
-      //log.info(s"${History(history, index).toString} to: $replica")
+      //println(s"${History(history, index).toString} to: $replica")
 
 
       case RemoveReplicaRequest(replica, _) =>
@@ -138,18 +145,16 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     })
 
     if (event.replica.equals(myNode) || !myReplicas.contains(event.replica)) {
-      //log.info(s"Send(REPLY, $event) to: ${event.sender}")
+      //println(s"Send(REPLY, $event) to: ${event.sender}")
       event.sender ! Reply(event)
     }
 
-    //log.info(s"STORE: ${store.toString()}")
-    //log.info(s"HISTORY: ${history.toString()}")
+    //println(s"STORE: ${store.toString()}")
+    //println(s"HISTORY: ${history.toString()}")
 
   }
 
   private def updatePaxosReplicas(): Unit = {
-    myNode.acceptorActor ! UpdateReplicas(myReplicas)
-    myNode.learnerActor ! UpdateReplicas(myReplicas)
     myNode.proposerActor ! UpdateReplicas(myReplicas)
   }
 
@@ -194,14 +199,22 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     * @return
     */
   private def previousCompleted(index: Long): Boolean = {
-    for (i <- 0 until index.toInt) {
-      if (history.get(i).isEmpty)
-        return false
-      //it is enough to check the head
-      if (!history(i).head.executed)
+    var tempLastExecuted = 0
+    var completed = true
+
+    for (i <- lastExecuted until index.toInt if completed) {
+      if (history.get(i).isEmpty) {
+        completed = false
+      } else if (!history(i).head.executed) {
+        //it is enough to check the head
         history(i).foreach(event => executeOp(event, i))
+        tempLastExecuted = i
+        completed = true
+      }
     }
-    true
+
+    lastExecuted = tempLastExecuted
+    completed
   }
 
   private def findValidIndex(): Long = {
