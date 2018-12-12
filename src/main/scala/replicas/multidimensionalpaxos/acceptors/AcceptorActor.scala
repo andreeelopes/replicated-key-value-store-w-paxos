@@ -17,7 +17,6 @@ case class AcceptorInstance(var np: Int = -1, var na: Int = -1, var va: List[Eve
 class AcceptorActor extends Actor with ActorLogging {
 
   var acceptorInstances = Map[Long, AcceptorInstance]()
-  var replicas = Set[ReplicaNode]()
   var myNode: ReplicaNode = _
 
 
@@ -26,15 +25,12 @@ class AcceptorActor extends Actor with ActorLogging {
     case InitPaxos(_myNode_) =>
       myNode = _myNode_
 
-    case UpdateReplicas(_replicas_) =>
-      replicas = _replicas_
-
     case Prepare(n, i) =>
-      //println(s"  Receive(PREPARE, $n, $i) from: $sender")
+      //log.info(s"  Receive(PREPARE, $n, $i) from: $sender")
       acceptorInstances += (i -> receivePrepare(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n))
 
     case Accept(n, v, i) =>
-      //println(s"  Receive(Accept, $n, $v, $i) | State($i) = ${acceptorInstances(i)}")
+      //log.info(s"  Receive(Accept, $n, $v, $i) | State($i) = ${acceptorInstances(i)}")
       acceptorInstances += (i -> receiveAccept(acceptorInstances.getOrElse(i, AcceptorInstance(i = i)), n, v))
 
   }
@@ -42,8 +38,7 @@ class AcceptorActor extends Actor with ActorLogging {
   def receivePrepare(iAcceptor: AcceptorInstance, n: Int): AcceptorInstance = {
     if (n > iAcceptor.np) {
       iAcceptor.np = n
-
-      //println(s"  Send(PREPARE_OK, ${iAcceptor.na}, ${iAcceptor.va}, ${iAcceptor.i}) to: $sender")
+      //log.info(s"  Send(PREPARE_OK, ${iAcceptor.na}, ${iAcceptor.va}, ${iAcceptor.i}) to: $sender")
       sender ! PrepareOk(iAcceptor.na, iAcceptor.va, iAcceptor.i, n)
     }
 
@@ -55,7 +50,7 @@ class AcceptorActor extends Actor with ActorLogging {
       iAcceptor.na = n
       iAcceptor.va = v
 
-      //println(s"  Send(ACCEPT_OK , $n, ${iAcceptor.i}) to: $sender")
+      //log.info(s"  Send(ACCEPT_OK , $n, ${iAcceptor.i}) to: $sender")
       sender ! AcceptOk(iAcceptor.na, iAcceptor.i, n)
     }
 

@@ -40,32 +40,32 @@ class ProposerActor extends Actor with ActorLogging {
 
     case Propose(v) =>
       receivePropose(v)
-//     //println(s"  Propose($v) | " +
+//     //log.info(s"  Propose($v) | " +
        // s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case PrepareOk(sna, va) =>
       receivePrepareOk(sna, va)
-//     //println(s"  Receive(PREPARE_OK, $sna, $va) | " +
+//     //log.info(s"  Receive(PREPARE_OK, $sna, $va) | " +
      //   s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case AcceptOk(sna) =>
       receiveAcceptOk(sna)
-//     //println(s"  Receive(ACCEPT_OK, $sna) | " +
+//     //log.info(s"  Receive(ACCEPT_OK, $sna) | " +
       //  s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case PrepareTimer =>
       receivePropose(value)
-//     //println(s"  Prepare timer fired | " +
+//     //log.info(s"  Prepare timer fired | " +
       //  s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case AcceptTimer =>
       receivePropose(value)
-//     //println(s"  Accept timer fired | " +
+//     //log.info(s"  Accept timer fired | " +
       //  s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
 
     case UpdateReplicas(_replicas_) =>
       replicas = _replicas_
-//     //println(s"  Receive(UPDATE_REPLICAS, $replicas) | " +
+//     //log.info(s"  Receive(UPDATE_REPLICAS, $replicas) | " +
        // s"state={sn: $sn, value: $value, highestSna: $highestSna, lockedValue: $lockedValue, accepts: $accepts, prepares: $prepares}")
   }
 
@@ -76,7 +76,7 @@ class ProposerActor extends Actor with ActorLogging {
     sn = snFactory.getSN()
     replicas.foreach(r => r.acceptorActor ! Prepare(sn))
     prepareTimer = context.system.scheduler.scheduleOnce(Duration(PrepareTimeout, TimeUnit.SECONDS), self, PrepareTimer)
-   //println(s"  Send(PREPARE,$sn) to: all acceptors")
+   //log.info(s"  Send(PREPARE,$sn) to: all acceptors")
   }
 
   def receivePrepareOk(sna: Int, va: String): Unit = {
@@ -96,7 +96,7 @@ class ProposerActor extends Actor with ActorLogging {
 
       replicas.foreach(r => r.acceptorActor ! Accept(sn, value))
       acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.SECONDS), self, AcceptTimer)
-     //println(s"  Send(ACCEPT, $sn, $value) to: all")
+     //log.info(s"  Send(ACCEPT, $sn, $value) to: all")
     }
   }
 
@@ -105,7 +105,7 @@ class ProposerActor extends Actor with ActorLogging {
     if (Utils.majority(accepts, replicas)) {
       acceptTimer.cancel()
       replicas.foreach(r => r.learnerActor ! LockedValue(value))
-     //println(s"  Send(LOCKED_VALUE, $value) to: all")
+     //log.info(s"  Send(LOCKED_VALUE, $value) to: all")
     }
   }
 

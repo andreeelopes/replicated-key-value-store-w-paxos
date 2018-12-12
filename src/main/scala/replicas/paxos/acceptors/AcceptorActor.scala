@@ -24,23 +24,23 @@ class AcceptorActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case Prepare(n) =>
-     //println(s"  Receive(PREPARE, $n) from: $sender")
+     //log.info(s"  Receive(PREPARE, $n) from: $sender")
 
       if (n > np) {
         np = n
         sender ! PrepareOk(na, va)
-       //println(s"  Send(PREPARE_OK, $na, $va) to: $sender")
+       //log.info(s"  Send(PREPARE_OK, $na, $va) to: $sender")
       }
 
 
     case Accept(n, v) =>
-     //println(s"  Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
+     //log.info(s"  Receive(Accept, $n, $v) | State = {na: $na, va: $va, np: $np}")
 
       if (n >= np) {
         na = n
         va = v
         sender ! AcceptOk(na)
-       //println(s"  Send(ACCEPT_OK , $na) to: $sender")
+       //log.info(s"  Send(ACCEPT_OK , $na) to: $sender")
       }
   }
 }

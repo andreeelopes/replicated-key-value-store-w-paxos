@@ -14,23 +14,23 @@ class RendezvousActor(numberOfReplicas: Int, numberOfClients: Int) extends Actor
     case identification: IdentifySmr =>
       membership += identification.node
       if (membership.size + clients.size == numberOfReplicas + numberOfClients) {
-        println(s"membership: $membership")
+        log.info(s"membership: $membership")
         membership.foreach { member => member.smrActor ! UpdateReplicas(membership) }
-        // println(s"Sending membership to $member")}
+        // log.info(s"Sending membership to $member")}
         clients.foreach { client => client ! UpdateReplicas(membership) }
-        //println(s"Sending membership to $client")}
+        //log.info(s"Sending membership to $client")}
       }
 
     case IdentifyClient(client: ActorRef) =>
-      println(s"Client= $client | path ${client.path}")
+      log.info(s"Client= $client | path ${client.path}")
       clients += client
 
       if (membership.size + clients.size == numberOfReplicas + numberOfClients) {
-        println(s"membership: $membership")
+        log.info(s"membership: $membership")
         membership.foreach { member => member.smrActor ! UpdateReplicas(membership) }
-        // println(s"Sending membership to $member")}
+        // log.info(s"Sending membership to $member")}
         clients.foreach { client => client ! UpdateReplicas(membership) }
-        //println(s"Sending membership to $client")}
+        //log.info(s"Sending membership to $client")}
       }
 
   }

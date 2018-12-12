@@ -28,7 +28,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
   val rendezvous = context.actorSelection {
     s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
   }
-  //println(s"$rendezvous")
+  //log.info(s"$rendezvous")
 
   rendezvous ! IdentifyClient(self)
 
@@ -75,7 +75,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
 
     case Reply(event) =>
       if (!delivered.contains(event.mid)) {
-        //println(s"Receive(REPLY, $event)")
+        //log.info(s"Receive(REPLY, $event)")
         delivered += event.mid
         appActor ! ReplyDelivery(event)
       }
@@ -113,7 +113,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
 
 
     case update: UpdateReplicas =>
-      println(replicas)
+      log.info(replicas)
       replicas = update.replicas.toList
       appActor ! update
       myReplica = replicas(pickRandomSmr()).smrActor

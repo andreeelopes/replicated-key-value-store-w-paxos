@@ -20,10 +20,10 @@ class LearnerActor extends Actor with ActorLogging {
       replicas = _replicas_
 
     case LockedValue(value) =>
-     //println(s"  Receive(LOCKED_VALUE, $value) from: $sender")
+     //log.info(s"  Receive(LOCKED_VALUE, $value) from: $sender")
 
       if (!decided) {
-       //println(s"  I learner $myNode have decided = $value")
+       //log.info(s"  I learner $myNode have decided = $value")
         decided = true
         //myNode.smrActor ! DecisionDelivery(value)
       }

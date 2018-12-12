@@ -13,7 +13,7 @@ object ClientMain extends App {
     val configuration = ConfigFactory.parseString(Utils.getConf(ip, port))
 
 
-    //println(configuration)
+    //log.info(configuration)
 
     val rendezvousIP = "127.0.0.1"
     val rendezvousPort = 69

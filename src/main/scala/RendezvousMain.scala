@@ -16,7 +16,7 @@ object RendezvousMain extends App {
     val rendezvousActor = rendezvousSystem.actorOf(Props(new RendezvousActor(args(0).toInt, args(1).toInt)), "rendezvous")
 
 
-    //println(configuration)
-    //println(s"${rendezvousActor}")
+    //log.info(configuration)
+    //log.info(s"${rendezvousActor}")
   }
 }

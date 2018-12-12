@@ -48,25 +48,24 @@ class ProposerActor extends Actor with ActorLogging {
       snFactory = new SequenceNumber(myNode.getNodeID)
 
     case Propose(v, i) =>
-      //
-      //println(s"Propose($v, $i)")
+      //log.info(s"Propose($v, $i)")
       proposerInstances += (i -> receivePropose(proposerInstances.getOrElse(i, ProposerInstance(i = i)), v))
 
     case PrepareOk(sna, va, i, snSent) =>
-      //println(s"  Receive(PREPARE_OK, $sna, $va, $i, $snSent) | State($i) = ${proposerInstances(i)}")
+      //log.info(s"  Receive(PREPARE_OK, $sna, $va, $i, $snSent) | State($i) = ${proposerInstances(i)}")
       proposerInstances += (i -> receivePrepareOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna, va, snSent))
 
     case AcceptOk(sna, i, snSent) =>
-      //println(s"  Receive(ACCEPT_OK, $sna, $i)")
+      //log.info(s"  Receive(ACCEPT_OK, $sna, $i)")
       proposerInstances += (i -> receiveAcceptOk(proposerInstances.getOrElse(i, ProposerInstance(i = i)), sna, snSent))
 
     case PrepareTimer(i) =>
-      //println(s"  Prepare timer fired, i=$i")
+      //log.info(s"  Prepare timer fired, i=$i")
       val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
       proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
     case AcceptTimer(i) =>
-      //println(s"  Accept timer fired, i=$i")
+      //log.info(s"  Accept timer fired, i=$i")
       val iProposer = proposerInstances.getOrElse(i, ProposerInstance(i = i))
       proposerInstances += (i -> receivePropose(iProposer, iProposer.value))
 
@@ -104,9 +103,11 @@ class ProposerActor extends Actor with ActorLogging {
           iProposer.value = iProposer.lockedValue
         }
 
-        //println(s"  Send(ACCEPT, ${iProposer.sn}, ${iProposer.value}) to: all")
+        //log.info(s"  Send(ACCEPT, ${iProposer.sn}, ${iProposer.value}) to: all")
         replicas.foreach(r => r.acceptorActor ! Accept(iProposer.sn, iProposer.value, iProposer.i))
-        iProposer.acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.MILLISECONDS), self, AcceptTimer)
+
+        iProposer.acceptTimer = context.system.scheduler.scheduleOnce(Duration(AcceptTimeout, TimeUnit.MILLISECONDS),
+          self, AcceptTimer)
       }
 
     }

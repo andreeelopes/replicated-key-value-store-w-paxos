@@ -56,7 +56,7 @@ class TestActor() extends Actor with ActorLogging {
 
     case a :UpdateReplicas =>
       replicas = a.replicas
-      //println(s"replicas: $replicas")
+      //log.info(s"replicas: $replicas")
 
 
   }
@@ -69,9 +69,9 @@ class TestActor() extends Actor with ActorLogging {
     throughput = timesOfOpsExecuted.size / (testDuration / 1000.0)
     latency = timesOfOpsExecuted.sum / timesOfOpsExecuted.size.toDouble
 
-    println(s"\n>>>Operations Times:\n${timesOfOpsExecuted.take(50)}\n")
-    println(s"Executed $mid operations (mid) | ${opsTimes.size}")
-    println(s"latency: $latency ms, throughput: $throughput ops/s\n\t\t\t\t\t\t\ttimesOfOpsExecuted:" +
+    log.info(s"\n>>>Operations Times:\n${timesOfOpsExecuted.take(50)}\n")
+    log.info(s"Executed $mid operations (mid) | ${opsTimes.size}")
+    log.info(s"latency: $latency ms, throughput: $throughput ops/s\n\t\t\t\t\t\t\ttimesOfOpsExecuted:" +
       s" ${timesOfOpsExecuted.size}, testDuration: $testDuration, timesOfOpsExecuted.sum: ${timesOfOpsExecuted.sum}\n\n")
   }
 
@@ -107,7 +107,7 @@ class TestActor() extends Actor with ActorLogging {
 
     }
     if (valid)
-      println(">>> Validation completed with Success!")
+      log.info(">>> Validation completed with Success!")
 
   }
 
