@@ -1,9 +1,10 @@
 package replicas.statemachinereplication
 
 import akka.actor.{Actor, ActorLogging}
+import clients.AddReplica
 import replicas.multidimensionalpaxos.{DecisionDelivery, Propose}
 import clients.test.{State, StateDelivery}
-import rendezvous.IdentifySmr
+import rendezvous.{GetClient, IdentifySmr}
 import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
@@ -23,13 +24,22 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
   var myNode: ReplicaNode = _
 
+  var lastExecuted = 0
+
   val rendezvous = context.actorSelection {
     s"akka.tcp://RemoteService@$rendezvousIP:$rendezvousPort/user/rendezvous"
   }
 
 
   override def receive: Receive = {
-    case i: replicas.statemachinereplication.InitSmr =>
+    case i: InitJoiningSmr =>
+      rendezvous ! GetClient(null)
+      myNode = i.myNode
+
+    case GetClient(client) =>
+      client ! AddReplica(myNode)
+
+    case i: InitSmr =>
       //println(s"Init=$i")
       myNode = i.myNode
       rendezvous ! IdentifySmr(myNode)
@@ -56,7 +66,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
     case a: UpdateReplicas =>
       myReplicas = a.replicas
-      //println(s"replicas: $myReplicas")
+      println(s"replicas: $myReplicas")
       updatePaxosReplicas()
   }
 
@@ -87,7 +97,6 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
   }
 
   def receiveDecision(ops: List[Event], i: Long): Unit = {
-    //    if(!executed.contains(op.mid)) { TODO - evitar executar duas vezes
     history += (i -> ops)
 
     if (toBeProposed.nonEmpty && toBeProposed.containsSlice(ops))
@@ -101,8 +110,6 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
     if (previousCompleted(i))
       ops.foreach(op => executeOp(op, i))
-
-    //    } TODO - evitar executar duas vezes
   }
 
 
@@ -148,8 +155,6 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
   }
 
   private def updatePaxosReplicas(): Unit = {
-    myNode.acceptorActor ! UpdateReplicas(myReplicas)
-    myNode.learnerActor ! UpdateReplicas(myReplicas)
     myNode.proposerActor ! UpdateReplicas(myReplicas)
   }
 
@@ -194,14 +199,22 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     * @return
     */
   private def previousCompleted(index: Long): Boolean = {
-    for (i <- 0 until index.toInt) {
-      if (history.get(i).isEmpty)
-        return false
-      //it is enough to check the head
-      if (!history(i).head.executed)
+    var tempLastExecuted = 0
+    var completed = true
+
+    for (i <- lastExecuted until index.toInt if completed) {
+      if (history.get(i).isEmpty) {
+        completed = false
+      } else if (!history(i).head.executed) {
+        //it is enough to check the head
         history(i).foreach(event => executeOp(event, i))
+        tempLastExecuted = i
+        completed = true
+      }
     }
-    true
+
+    lastExecuted = tempLastExecuted
+    completed
   }
 
   private def findValidIndex(): Long = {

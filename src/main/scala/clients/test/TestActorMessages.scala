@@ -6,7 +6,7 @@ import utils.ReplicaNode
 
 import scala.collection.immutable.Queue
 
-case class StartTest(clientActor: ActorRef, testDuration: Long)
+case class StartTest(clientActor: ActorRef, testDuration: Long, testType: Int)
 
 case class Validate()
 

@@ -58,6 +58,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
       myReplica ! RemoveReplicaRequest(node, generateMID())
 
     case ResendOp(op) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
       if (!delivered.contains(op.mid))
         myReplica ! op
       else {
@@ -66,6 +67,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
       }
 
     case ResendWeakOp(op) =>
+      myReplica = replicas(pickRandomSmr()).smrActor
       if (!delivered.contains(op.mid))
         myReplica ! op
       else {

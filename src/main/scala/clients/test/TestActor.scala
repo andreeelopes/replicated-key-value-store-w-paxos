@@ -11,13 +11,14 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 
 
-
 class TestActor() extends Actor with ActorLogging {
 
   case class OperationMetrics(time: Long, delivered: Boolean = false)
 
   val PutOperations = 100
   val KeyA = "keyA"
+  val PutOpType = 0
+  val GetOpType = 1
 
   var replicas: Set[ReplicaNode] = _
   var states = List[StateDelivery]()
@@ -28,7 +29,7 @@ class TestActor() extends Actor with ActorLogging {
   var testDuration: Long = _
   var testStart: Long = _
   var mid = 0
-
+  var testType = 0 //0=PUT 1=GET
 
 
   override def receive = {
@@ -54,13 +55,12 @@ class TestActor() extends Actor with ActorLogging {
       receiveReplyDelivery(Event(null, _mid_, null, null))
 
 
-    case a :UpdateReplicas =>
+    case a: UpdateReplicas =>
       replicas = a.replicas
-      //println(s"replicas: $replicas")
+    //println(s"replicas: $replicas")
 
 
   }
-
 
 
   def calculateMetrics(): Unit = {
@@ -79,15 +79,19 @@ class TestActor() extends Actor with ActorLogging {
   private def validateReplicasState(): Unit = {
     var valid: Boolean = true
     log.error(s">>> Starting Validation...") //\n\nstates=$states\n\n")
+
+    println("Histories size:")
+    states.foreach(s => print(s.history.size + "\t"))
+
     if (states.count { state => state.history.equals(states.head.history) } != states.size) {
       log.error("Different histories!")
       valid = false
     }
 
-// TODO   if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
-//      log.error("Different executed ops!")
-//      valid = false
-//    }
+    // TODO   if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
+    //      log.error("Different executed ops!")
+    //      valid = false
+    //    }
 
     if (states.count { state => state.replicas.equals(states.head.replicas) } != states.size) {
       log.error("Different replicas!")
@@ -101,13 +105,13 @@ class TestActor() extends Actor with ActorLogging {
     }
     if (states.count { state => state.toBeProposed.equals(states.head.toBeProposed) } != states.size) {
       log.error("Different toBeProposed queue!")
-      states.foreach(s => log.error(s"\n\nqueue = ${s.toBeProposed.size}"))
+      states.foreach(s => log.error(s"Queue = ${s.toBeProposed.size}"))
 
       valid = false
 
     }
     if (valid)
-      println(">>> Validation completed with Success!")
+      log.error(">>> Validation completed with Success!")
 
   }
 
@@ -120,9 +124,11 @@ class TestActor() extends Actor with ActorLogging {
     }
   }
 
+
   def receiveStartTest(s: StartTest): Unit = {
     clientActor = s.clientActor
     testDuration = s.testDuration
+    testType = s.testType
     testStart = System.currentTimeMillis()
     executeTestOp()
   }
@@ -130,22 +136,25 @@ class TestActor() extends Actor with ActorLogging {
   def executeTestOp(): Unit = {
     if (System.currentTimeMillis() - testStart <= testDuration) {
 
-      clientActor ! TestPut(KeyA, mid.toString, mid.toString)
-      //clientActor ! TestGet(KeyA, mid.toString)
+      if (testType == PutOpType) {
+        executePutTest()
+      }
+      else if (testType == GetOpType) {
+        executeGetTest()
+      }
+
       opsTimes += (mid.toString -> OperationMetrics(System.currentTimeMillis()))
 
       mid += 1
     }
   }
 
-//  def receiveExecuteTest1(): Unit = {
-//    if (System.currentTimeMillis() - testStart <= testDuration) {
-//
-//      clientActor ! TestGet(KeyA, mid.toString)
-//      opsTimes += (mid.toString -> OperationMetrics(System.currentTimeMillis()))
-//
-//      mid += 1
-//    }
-//  }
+  def executeGetTest() = {
+    clientActor ! TestWeakGet(KeyA, mid.toString)
+  }
+
+  def executePutTest() = {
+    clientActor ! TestPut(KeyA, mid.toString, mid.toString)
+  }
 
 }
