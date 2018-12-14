@@ -115,7 +115,7 @@ class ClientActor(ip: String, port: Int, rendezvousIP: String, rendezvousPort: I
 
 
     case update: UpdateReplicas =>
-      log.info(replicas)
+      log.info(replicas.toString)
       replicas = update.replicas.toList
       appActor ! update
       myReplica = replicas(pickRandomSmr()).smrActor

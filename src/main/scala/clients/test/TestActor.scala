@@ -78,7 +78,7 @@ class TestActor() extends Actor with ActorLogging {
 
   private def validateReplicasState(): Unit = {
     var valid: Boolean = true
-    log.error(s">>> Starting Validation...") //\n\nstates=$states\n\n")
+    log.info(s">>> Starting Validation...") //\n\nstates=$states\n\n")
 
     println("Histories size:")
     states.foreach(s => print(s.history.size + "\t"))
@@ -88,7 +88,7 @@ class TestActor() extends Actor with ActorLogging {
       valid = false
     }
 
-    // TODO   if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
+    //   if(states.count{state => state.history.filter(p=>p._2.executed).equals(states.head.history.filter(p=>p._2.executed))}  != states.size){
     //      log.error("Different executed ops!")
     //      valid = false
     //    }
@@ -111,7 +111,7 @@ class TestActor() extends Actor with ActorLogging {
 
     }
     if (valid)
-      log.error(">>> Validation completed with Success!")
+      log.info(">>> Validation completed with Success!")
 
   }
 

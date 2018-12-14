@@ -14,11 +14,13 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
   val NotDefined = "NA"
 
   var history = Map[Long, List[Event]]() // array that contains the history of operations [i, (op, returnValue, mid)]
-  var current: Long = 0 // current op
+  var current: Long = 0 // last slot used in history
+
   var store = Map[String, String]() // key value store
   var toBeProposed = Queue[Event]() // queue with ops to be proposed (op, sender, mid)
   var proposed = Set[String]()
-  var historyProcessed = false
+  var historyProcessed = false //prevents the execution of history more than one time
+
 
   var myReplicas = Set[ReplicaNode]()
 
@@ -54,7 +56,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
 
     case op: Operation =>
       //println(op.toString)
-      receiveUpdateOp(op)
+      receiveStrongOp(op)
 
     case dd: DecisionDelivery =>
       //println(dd.toString)
@@ -77,7 +79,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     sender ! GetReply(store.getOrElse(key, NotDefined), mid)
   }
 
-  def receiveUpdateOp(op: Operation): Unit = {
+  def receiveStrongOp(op: Operation): Unit = {
     if (!proposed.contains(op.mid)) {
       proposed += op.mid
       toBeProposed = toBeProposed.enqueue(Event(op, op.mid, sender, myNode))
@@ -163,32 +165,38 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     if (!historyProcessed) {
       historyProcessed = true
       _history_.foreach { p =>
-        p._2.foreach { event =>
 
-          var oldValue: String = null
-          event.op match {
-            case PutRequest(key, value, _) =>
-              oldValue = store.getOrElse(key, NotDefined)
-              store += (key -> value)
+        if (p._1 < index) {
 
-            case StrongGetRequest(key, _) =>
-              oldValue = store.getOrElse(key, NotDefined)
+          p._2.foreach { event =>
 
-            case AddReplicaRequest(replica, _) =>
-              oldValue = index.toString
-              myReplicas += replica
-              updatePaxosReplicas()
+            var oldValue: String = null
+            event.op match {
+              case PutRequest(key, value, _) =>
+                oldValue = store.getOrElse(key, NotDefined)
+                store += (key -> value)
 
-            case RemoveReplicaRequest(replica, _) =>
-              oldValue = index.toString
-              myReplicas -= replica
-              updatePaxosReplicas()
+              case StrongGetRequest(key, _) =>
+                oldValue = store.getOrElse(key, NotDefined)
+
+              case AddReplicaRequest(replica, _) =>
+                oldValue = p._1.toString
+                myReplicas += replica
+                updatePaxosReplicas()
+
+              case RemoveReplicaRequest(replica, _) =>
+                oldValue = p._1.toString
+                myReplicas -= replica
+                updatePaxosReplicas()
+            }
+
+            history += (p._1 -> history(p._1))
           }
 
-          history += (index -> history(index).map { e =>
-            if (e.equals(event)) event.copy(executed = true, returnValue = oldValue) else e
-          })
+
+
         }
+
       }
     }
   }
@@ -221,7 +229,7 @@ class StateMachineReplicationActor(rendezvousIP: String, rendezvousPort: Int) ex
     if (history.isEmpty)
       return 0
     val maxKey = history.keys.max
-    for (i <- 0 to maxKey.toInt) {
+    for (i <- current to maxKey.toInt) {
 
       if (history.get(i).isEmpty)
         return i
