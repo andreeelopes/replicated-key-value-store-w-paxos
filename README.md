@@ -1,17 +1,20 @@
 # Replicated Key-Value Store with Paxos
 
-To generate jar:
+- To generate jar:
 
 ``
 sbt assembly
 ``
 
-There are three Mains: Client, Replica, Rendezvous.
+- There are three Mains: Client, Replica, Rendezvous.
 
-To run tests just run the`run.sh` script
-To generate the metrics run `extractMetrics.sh` script
+- To run tests just run the`run.sh` script
+
+- To generate the metrics run `extractMetrics.sh` script
+
+- The report is present in the doc folder
 
 ###Developers
 
-* André Lopes nº 45617
-* Nelson Coquenim nº 45694
+* Andrï¿½ Lopes nï¿½ 45617
+* Nelson Coquenim nï¿½ 45694
