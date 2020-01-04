@@ -14,7 +14,7 @@ sbt assembly
 
 - The report is present in the doc folder
 
-###Developers
+### Developers
 
-* Andr� Lopes n� 45617
-* Nelson Coquenim n� 45694
+* André Lopes
+* Nelson Coquenim
